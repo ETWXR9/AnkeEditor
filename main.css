@@ -1,0 +1,138 @@
+body,html{
+    margin:0;
+}
+#main-div{
+    display: flex;
+    flex-direction: row;
+    height: 100vh;
+    width: 100vw;
+    background-color: wheat;
+}
+#history-div{
+    width: 20vw;
+    border-right: 2px solid black;
+    display: flex;
+    flex-direction: column;
+    justify-items: flex-start;
+    overflow: scroll;
+    overflow-x: hidden;
+}
+.history-record{
+    border-radius:2em;
+    width: auto;
+    background-color: yellowgreen;
+    color:white;
+    padding:3px;
+    margin:3px;
+}
+
+#input-div{
+    display: inline-block;
+    width: 40vw;
+    padding:1em;
+    padding-bottom: 30vh;
+    overflow: scroll;
+    overflow-x: hidden;
+}
+#picture-div{
+    width: 30vw;
+    border-left: 2px solid black;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+.chara-div{
+    height: auto;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+.chara-name{
+    height: auto;
+    width: 100%;
+    padding-left: 0.2em;
+    top:0;
+    left: 0;
+    display: block;
+    background-color: coral;
+}
+.pic-button{
+    padding:3px;
+    width: 14%;
+}
+.add-pic-button{
+    border: none;
+    border-radius: 50%;
+    padding:3px;
+    width: 3vw;
+    height: 3vw;
+    background-color: Transparent;
+    background-image:url("addpicbutton.png");
+    background-size: cover;
+    justify-self: center;
+    align-self: center;
+}
+.add-pic-button:hover{
+    background-color: rgb(161, 243, 114);
+}
+
+
+.new-chara-div{
+    padding:3px;
+    height: 30px;
+    width: 20vw;
+    background-color: rgb(252, 154, 118);
+    border: none;
+}
+
+#pic-check-form{
+    display: flex;
+    flex-direction: column;
+    padding:3px;
+    border-left: 2px solid black;
+    width:10vw;
+    padding-bottom: 30vh;
+    overflow: scroll;
+    overflow-x: hidden;
+}
+.chara-label{
+    display: flex;
+    flex-direction: row;
+    width:100%;
+    align-items: center;
+    padding: 0.3em;
+    font-size: 20px;
+}
+.pic-checkbox{
+    padding: 1em;
+}
+.pic-checkbox:checked + span{
+    background-color: lightcoral;
+}
+
+.dice-div{
+    display: flex;
+    flex-direction: row;
+    padding:3px;
+    background-color: rgb(44, 44, 44);
+    color: white;
+    position: absolute;
+    left:120px;
+    top:17px;
+}
+.dice-input{
+    padding: 1px;
+    padding-right: 1em;
+    font-size: 15px;
+}
+.dice-tip{
+    font-size: 15px;
+    width: auto;
+    text-align: center;
+    padding-right: 8px;
+}
+.dice-sum{
+    width: auto;
+    justify-self: right;
+}
