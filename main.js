@@ -1,8 +1,9 @@
 const electron = require('electron')
-const { ipcMain, app, BrowserWindow, clipboard, Menu, MenuItem, remote, ipcRenderer, webContents, dialog } = require('electron')
+const { ipcMain, app, BrowserWindow, clipboard, Menu, MenuItem, remote, ipcRenderer, webContents, dialog, shell } = require('electron')
 const path = require("path");
 const fs = require("fs");
 const RandomOrg = require('random-org');
+const { request } = require("@octokit/request");
 
 let win;
 
@@ -32,6 +33,7 @@ app.whenReady().then(() => {
             e.preventDefault();
             win.webContents.send("onquit")
         }
+        
     })
 })
 
@@ -100,6 +102,8 @@ ipcMain.on('loadconfig',(event,args)=>{
         configJsonParse = JSON.parse(configJson);
         // win.webContents.send("winlog", "读取config文件结果" + configJson);
         win.webContents.send("getconfig",configJsonParse);
+
+        CheckVersion();
 })
 
 ipcMain.on('contentunsavechange', (event, args) => {
@@ -167,6 +171,16 @@ ipcMain.on("savejson", (event, args) => {
 
 });
 
+ipcMain.on("saveconfig", (event, args) => {
+    if (app.isPackaged) {
+        fs.writeFileSync(process.env.PORTABLE_EXECUTABLE_DIR + "/" + args[0], args[1], "utf-8");
+    } else {
+        fs.writeFileSync(args[0], args[1], "utf-8");
+    }
+
+
+});
+
 ipcMain.on("readclip", (event, charaname) => {
     let clipcontent = clipboard.readHTML();
     // Send result back to renderer process
@@ -201,4 +215,24 @@ ipcMain.on("reqrandom", (event, dicevalue) => {
             win.webContents.send("getrandom", result);
         });
 })
+
+
+//检查更新
+function CheckVersion(){
+    win.webContents.send("winlog", "读取github中");
+    request('GET /repos/{owner}/{repo}/releases/latest', {
+        owner: 'ETWXR9',
+        repo: 'AnkeEditor'
+      }).then(function (result) {
+        win.webContents.send("checkversion",result);
+    });
+
+
+
+    //   win.webContents.send("checkversion",result);
+
+}
+ipcMain.on("openpage", (event, url) => {
+    shell.openExternal(url);
+});
 

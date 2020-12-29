@@ -108,7 +108,20 @@ contextBridge.exposeInMainWorld(
         if (validChannels.includes(channel)) {
             ipcRenderer.on(channel, (event, ...args) => func(...args));
         }
-    }
+    },
+    CheckVersion: (channel, func) => {
+        let validChannels = ["checkversion"];
+        if (validChannels.includes(channel)) {
+            ipcRenderer.on(channel, (event, ...args) => func(...args));
+        }
+    },
+    OpenPage: (channel, data) => {
+        // whitelist channels
+        let validChannels = ["openpage"];
+        if (validChannels.includes(channel)) {
+            ipcRenderer.send(channel, data);
+        }
+    },
 }
 )
 

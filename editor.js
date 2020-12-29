@@ -1,3 +1,7 @@
+
+
+
+
 Array.prototype.remove = function (item) {
     var index = this.indexOf(item);
     if (index > -1) {
@@ -5,9 +9,13 @@ Array.prototype.remove = function (item) {
     }
 };
 
+
+
 //输入栏
 let inputDiv = null;
 
+//图片栏
+let picDiv = null;
 //历史栏
 let historyDiv = null;
 
@@ -17,11 +25,18 @@ let picData = null;
 //piccheckform
 let checkedname = [];
 
+//font-size-slider
+let fontSizeSlider = null;
+
+//picsizeslider
+let picSizeSlider = null;
+
 //inputdiv离开时保存selection
 let selectionOnBlur = null;
 
-//randomorg
-let randomApiKey = null;
+//设置
+let configData = {};
+
 
 //文本是否有未保存的改动
 let contentUnsaved = {
@@ -37,6 +52,13 @@ let contentUnsaved = {
         }
     }
 }
+
+//是否隐藏历史栏
+let hideHistoryDiv = false;
+
+//输入框字体限制
+let maxFontSize = 50;
+let minFontSize = 10;   
 
 
 //封装换行逻辑，用于回车确认时临时注销
@@ -57,12 +79,21 @@ function breakLineEvent(e) {
 
 //load事件，修正回车换行，添加图片插入功能和删除菜单。加载图片栏
 window.onload = () => {
+
+
     inputDiv = document.getElementById('input-div');
     historyDiv = document.getElementById('history-div');
+    picDiv = document.getElementById('picture-div');
     inputDiv.addEventListener('keydown', breakLineEvent);
     inputDiv.addEventListener('input', e => {
         contentUnsaved.val = true;
     })
+    fontSizeSlider = document.getElementById('font-size-slider');
+    fontSizeSlider.addEventListener('change',onFontSizeSliderChange);
+
+    picSizeSlider = document.getElementById('pic-size-slider');
+    picSizeSlider.addEventListener('change',onPicSizeSliderChange);
+    document.getElementById('hide-history-button').addEventListener('click',onHideHistoryButtonClick);
     document.querySelector('#input-div').addEventListener("paste", (e) => {
         e.stopPropagation();
         e.preventDefault();
@@ -113,6 +144,18 @@ window.onload = () => {
 
 
 window.fs.GetConfig("getconfig", (config) => {
+    configData = config;
+    //读取APIKEY
+    configData.randomapi = config.randomapi?"":config.randomapi;
+    //设置字体、图片
+    fontSizeSlider.value = config.fontsizeslider;
+    onFontSizeSliderChange();
+    picSizeSlider.value = config.picsizeslider;
+    onPicSizeSliderChange();
+    //设置是否隐藏历史
+    hideHistoryDiv = !config.hidehistorydiv;
+    onHideHistoryButtonClick();
+   
     if (config.randomapi == "") {
         console.log("未读取到API")
         return 0;
@@ -140,7 +183,6 @@ window.fs.GetConfig("getconfig", (config) => {
             console.log("读取myJson " + JSON.stringify(myJson))
             if (myJson.result) {
                 if (myJson.result.status == "running") {
-                    randomApiKey = config.randomapi;
                     console.log("成功验证APIKey");
                     alert("成功验证APIKey");
                     return 0;
@@ -175,6 +217,14 @@ window.log.WinLog("winlog", (data) => {
     console.log(data);
 })
 
+//检查版本
+window.log.CheckVersion("checkversion",(result)=>{
+    document.getElementById("version-text").innerHTML = "<b>最新版本为"+result.data.name+" 点击下载</b>";
+    document.getElementById("version-text").addEventListener('click',e=>{
+        e.preventDefault();
+        window.log.OpenPage("openpage",result.data.html_url);
+    })
+})
 
 
 
@@ -192,7 +242,7 @@ window.fs.GetJson("getjson", (data) => {
     const checkform = document.querySelector('#pic-check-form');
     checkform.innerHTML = "";
     //再清除picdiv
-    document.querySelector('#picture-div').innerHTML = "";
+    picDiv.innerHTML = "";
     //根据picdata生成check栏
     data.data.forEach(chara => {
         //创建新的label
@@ -268,7 +318,7 @@ window.fs.GetJson("getjson", (data) => {
             addChara(e.target.value);
         }
     });
-    document.querySelector('#picture-div').appendChild(newcharadiv);
+    picDiv.appendChild(newcharadiv);
     //再根据checkedname选中指定checkbox并加载至picdiv（于新增人物按钮前）
     checkedname.forEach(name => {
         //选中指定checkbox
@@ -311,7 +361,7 @@ window.fs.GetJson("getjson", (data) => {
 
 //读取图片JSON
 function loadPics() {
-    document.querySelector('#picture-div').innerHTML = "";
+    picDiv.innerHTML = "";
     window.fs.ReadJson("readjson", "picData.json");
 }
 
@@ -451,8 +501,11 @@ function setDiceInput() {
     diceinput.addEventListener("keydown", (e) => {
         if (e.keyCode === 13) {
             e.preventDefault();
-            diceinput.readOnly = true;
             let text = e.srcElement.value;
+            //判空
+            if (text == "")return;
+
+            diceinput.readOnly = true;
             if (/^[1-9]\d{0,3}((\+|\-)[1-9]\d{0,3})*$/.test(text)) {
                 //通过测试，提取第一个数，剩下部分进行eval计算。
                 let diceValue = parseInt(text.match(/^[1-9]\d*/));;
@@ -466,7 +519,7 @@ function setDiceInput() {
                 console.log("fixValue为" + fixValue);
 
 
-                if (randomApiKey) {
+                if (configData.randomApiKey) {
                     //调用RANDOM.ORG，显示等待文字，删除dice元素，插入总和，记录历史
                     dicesum.innerText = dicesum.innerText + ` 正在获取随机数`;
                     fetch("https://api.random.org/json-rpc/2/invoke", {
@@ -479,7 +532,7 @@ function setDiceInput() {
                             "jsonrpc": "2.0",
                             "method": "generateIntegers",
                             "params": {
-                                "apiKey": randomApiKey,
+                                "apiKey": configData.randomApiKey,
                                 "n": 1,
                                 "min": 1,
                                 "max": diceValue,
@@ -597,4 +650,52 @@ function getCaretTopPoint() {
         const delta = (lineHeight - fontSize) / 2
         return { left: rect.left, top: (rect.top + delta) }
     }
+}
+
+//点击按钮后将#history-div的flex-grow设为0，如果已经为0则设置为1.5;
+function onHideHistoryButtonClick(){
+    hideHistoryDiv = !hideHistoryDiv;
+    historyDiv.setAttribute("style",`flex-grow:${hideHistoryDiv?0:1.5};`);
+    configData.hidehistorydiv = hideHistoryDiv;
+    window.fs.SaveJson("savejson", ["config.json", JSON.stringify(configData)]);
+}
+
+function onFontSizeSliderChange(){
+    let v = fontSizeSlider.value;
+    configData.fontsizeslider = v;
+    let size = Math.floor(v/100*(maxFontSize-minFontSize)+minFontSize);
+    // console.log("fontsliderChange");
+    inputDiv.setAttribute("style",`font-size: ${size}px;`);
+    window.fs.SaveJson("savejson", ["config.json", JSON.stringify(configData)]);
+}
+
+function onPicSizeSliderChange(){
+    let v = picSizeSlider.value;
+    configData.picsizeslider = v;
+    let size = 0;
+    console.log("picsizesliderchange to "+v);
+    console.log("picsizefloor to "+Math.floor(v/20));
+    // console.log("picsliderChange");
+    switch (Math.floor(v/20)) {
+        case 0:
+            size = "14.9%";
+            break;
+        case 1:
+            size = "18%";
+            break;
+        case 2:
+            size = "23%";
+            break;
+        case 3:
+            size = "31.6%";
+            break;
+        case 4:
+            size = "48%";
+            break;
+        case 5:
+            size = "48%";
+            break;
+    }
+    document.documentElement.style.setProperty('--item-width', size);
+    window.fs.SaveJson("savejson", ["config.json", JSON.stringify(configData)]);
 }

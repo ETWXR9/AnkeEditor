@@ -1,46 +1,103 @@
+:root{
+    --item-width:48%;
+}
+
 body,html{
     margin:0;
 }
 #main-div{
     display: flex;
     flex-direction: row;
-    height: 100vh;
+    flex-wrap: nowrap;
+    height: 98vh;
     width: 100vw;
     background-color: wheat;
 }
+
+#top-div{
+    width:100vw;
+    height: 2vh;
+    background-color: rgb(185, 185, 185);
+    display: flex;
+    flex-wrap: nowrap;
+    flex-direction: row;
+}
+#hide-history-button{
+    width:10vw;
+    margin-left: 3vw;
+    margin-right: 3vw;
+    border-radius: 10px;
+    align-self: center;
+}
+#font-size-slider-div{
+    width:20vw;
+    margin-left: 3vw;
+    margin-right: 3vw;
+    display: flex;
+    align-items: center;
+}
+#pic-size-slider-div{
+    width:20vw;
+    margin-left: 3vw;
+    margin-right: 3vw;
+    display: flex;
+    align-items: center;
+}
+#version-text{
+    color: blue;
+}
+
+
+#font-size-slider{
+    width:100%;
+
+}
+#pic-size-slider{
+    width:100%;
+}
 #history-div{
-    width: 20vw;
     border-right: 2px solid black;
     display: flex;
     flex-direction: column;
     justify-items: flex-start;
     overflow: scroll;
     overflow-x: hidden;
-}
-.history-record{
-    border-radius:2em;
-    width: auto;
-    background-color: yellowgreen;
-    color:white;
-    padding:3px;
-    margin:3px;
+    flex-grow: 1.5;
+    width: 0;
 }
 
 #input-div{
     display: inline-block;
-    width: 40vw;
     padding:1em;
     padding-bottom: 30vh;
     overflow: scroll;
     overflow-x: hidden;
+    flex-grow: 3.5;
+    width: 0;
 }
 #picture-div{
-    width: 30vw;
     border-left: 2px solid black;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    overflow: scroll;
+    overflow-x: hidden;
+    flex-grow: 3;
+    width: 0;
 }
+#pic-check-form{
+    display: flex;
+    flex-direction: column;
+    padding:3px;
+    border-left: 2px solid black;
+    padding-bottom: 30vh;
+    overflow: scroll;
+    overflow-x: hidden;
+    flex-grow: 1;
+    width: 0;
+}
+
+
 .chara-div{
     height: auto;
     width: 100%;
@@ -57,9 +114,18 @@ body,html{
     display: block;
     background-color: coral;
 }
+.history-record{
+    border-radius:2em;
+    width: auto;
+    background-color: yellowgreen;
+    color:white;
+    padding:3px;
+    margin:3px;
+}
+
 .pic-button{
     padding:3px;
-    width: 14%;
+    width: var(--item-width);
 }
 .add-pic-button{
     border: none;
@@ -81,21 +147,12 @@ body,html{
 .new-chara-div{
     padding:3px;
     height: 30px;
-    width: 20vw;
+    width: 80%;
     background-color: rgb(252, 154, 118);
     border: none;
 }
 
-#pic-check-form{
-    display: flex;
-    flex-direction: column;
-    padding:3px;
-    border-left: 2px solid black;
-    width:10vw;
-    padding-bottom: 30vh;
-    overflow: scroll;
-    overflow-x: hidden;
-}
+
 .chara-label{
     display: flex;
     flex-direction: row;

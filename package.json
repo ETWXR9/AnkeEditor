@@ -1,6 +1,6 @@
 {
   "name": "ankeeditor",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "",
   "main": "main.js",
   "license": "ISC",
@@ -33,6 +33,7 @@
     }
   },
   "dependencies": {
+    "@octokit/request": "^5.4.12",
     "random-org": "^2.1.0"
   }
 }
