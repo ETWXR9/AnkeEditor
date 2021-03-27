@@ -182,7 +182,9 @@ ipcMain.on("saveconfig", (event, args) => {
 });
 
 ipcMain.on("readclip", (event, charaname) => {
-    let clipcontent = clipboard.readHTML();
+    let clipcontentPlain = clipboard.readText();
+    let clipcontentHTML = clipboard.readHTML();
+    let clipcontent = [clipcontentHTML,clipcontentPlain];
     // Send result back to renderer process
     win.webContents.send("getclip", charaname, clipcontent);
 });

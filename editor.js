@@ -116,12 +116,13 @@ window.onload = () => {
     document.onmousedown = e => {
         if (e.target.className === 'pic-button') {
             e.preventDefault();
-            if (e.button == 0) {
+            //检查输入框是否焦点，防止插入图片到顶部。
+            if (e.button == 0 && inputDiv === document.activeElement) {
                 inputDiv.focus();
                 breakLine();
                 document.execCommand('insertImage', false, e.target.src);
                 breakLine();
-                document.execCommand('insertText', false, e.target.parentNode.id + "：");
+                // document.execCommand('insertText', false, e.target.parentNode.id + "：");
             }
             //右键菜单，里面是删除
             if (e.button == 2) {
@@ -243,8 +244,13 @@ window.fs.GetJson("getjson", (data) => {
     checkform.innerHTML = "";
     //再清除picdiv
     picDiv.innerHTML = "";
+    //按字母排序
+    var array = data.data;
+    array = array.sort(function compareFunction(item1, item2) {
+        return item1.name.localeCompare(item2.name);
+    });
     //根据picdata生成check栏
-    data.data.forEach(chara => {
+    array.forEach(chara => {
         //创建新的label
         let newlabel = document.createElement('label');
         //可选：添加label信息
@@ -366,13 +372,21 @@ function loadPics() {
 }
 
 //接收剪贴板内容并添加图片，然后刷新图片栏
-window.clipboard.GetClip("getclip", (charaname, html) => {
-    //从剪贴板拿取html数据，取出所有图片url，全部加入。
-    let regexp = /http((?!(png|jpg|jpeg)).)*(png|jpg|jpeg)/gi;
-    console.log("取得剪贴板" + html);
-    if (regexp.test(html)) {
+window.clipboard.GetClip("getclip", (charaname, clipContent) => {
+    //从剪贴板拿取数据，取出所有图片url，全部加入。（先尝试纯文本，然后尝试html）
+    let regexp = /http((?!(http|png|jpg|jpeg)).)*(png|jpg|jpeg)/gi;
+    console.log("取得剪贴板" + clipContent);
+    if (regexp.test(clipContent[0])) {
         let chara = picData.data.find((item) => { return item.name == charaname });
-        let urls = html.match(regexp);
+        let urls = clipContent[0].match(regexp);
+        urls.forEach(url => {
+            chara.pics.push(url);
+        });
+        window.fs.SaveJson("savejson", ["picData.json", JSON.stringify(picData)]);
+        loadPics();
+    }else if(regexp.test(clipContent[1])) {
+        let chara = picData.data.find((item) => { return item.name == charaname });
+        let urls = clipContent[1].match(regexp);
         urls.forEach(url => {
             chara.pics.push(url);
         });
