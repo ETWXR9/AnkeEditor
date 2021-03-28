@@ -244,13 +244,23 @@ window.fs.GetJson("getjson", (data) => {
     checkform.innerHTML = "";
     //再清除picdiv
     picDiv.innerHTML = "";
+    //去重
+    var uniqueArray = new Array;
+    data.data.forEach(chara=>{
+        if (uniqueArray.find(uniqueChara=>{return uniqueChara.name == chara.name})!=undefined) {
+            return;
+        }
+        uniqueArray.push(chara);
+    })
+    data.data = uniqueArray;
+
     //按字母排序
-    var array = data.data;
-    array = array.sort(function compareFunction(item1, item2) {
+    var sortedChara = data.data;
+    sortedChara = sortedChara.sort(function compareFunction(item1, item2) {
         return item1.name.localeCompare(item2.name);
     });
     //根据picdata生成check栏
-    array.forEach(chara => {
+    sortedChara.forEach(chara => {
         //创建新的label
         let newlabel = document.createElement('label');
         //可选：添加label信息
@@ -320,6 +330,12 @@ window.fs.GetJson("getjson", (data) => {
     newcharadiv.addEventListener('keydown', (e) => {
         if (e.keyCode === 13 && e.target.value != '') {
             e.preventDefault();
+            //检查是否已经存在
+            if (checkedname.indexOf(e.target.value)!=-1) {
+                return;
+            }else if (sortedChara.find(name=>{return name == e.target.value}) == e.target.value) {
+                return;
+            }
             checkedname.push(e.target.value);
             addChara(e.target.value);
         }
