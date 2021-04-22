@@ -99,11 +99,12 @@ window.onload = () => {
         e.stopPropagation();
         e.preventDefault();
         var text = '', event = (e.originalEvent || e);
-        if (event.clipboardData && event.clipboardData.getData) {
-            text = event.clipboardData.getData('text/html');
-        } else if (window.clipboardData && window.clipboardData.getData) {
-            text = window.clipboardData.getData('Text');
-        }
+        // if (event.clipboardData && event.clipboardData.getData) {
+        //     text = event.clipboardData.getData('text/html');
+        // } else if (window.clipboardData && window.clipboardData.getData) {
+        //     text = window.clipboardData.getData('Text');
+        // }
+        text = event.clipboardData.getData('text/html')?event.clipboardData.getData('text/html'):event.clipboardData.getData('Text');
         text = text.replace("<div>", "");
         text = text.replace("</div>", "<br/>");
         text = text.replace(/style="[^"]*"/gi, "");
