@@ -100,7 +100,7 @@ ipcMain.on('loadconfig',(event,args)=>{
             configJson = fs.readFileSync("config.json", "utf-8");
         }
         configJsonParse = JSON.parse(configJson);
-        // win.webContents.send("winlog", "读取config文件结果" + configJson);
+        win.webContents.send("winlog", "读取config文件结果" + configJson);
         win.webContents.send("getconfig",configJsonParse);
 
         CheckVersion();
@@ -236,5 +236,15 @@ function CheckVersion(){
 }
 ipcMain.on("openpage", (event, url) => {
     shell.openExternal(url);
+});
+
+ipcMain.on("showalert", (event, msg) => {
+    const options = {
+        type: "none",
+        buttons: [msg[1]],
+        title: "提示",
+        message: msg[0]
+    }
+    dialog.showMessageBox(win, options)
 });
 

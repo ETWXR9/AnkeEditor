@@ -29,6 +29,13 @@ body,html{
     border-radius: 10px;
     align-self: center;
 }
+#add-name-button{
+    width:10vw;
+    margin-left: 3vw;
+    margin-right: 3vw;
+    border-radius: 10px;
+    align-self: center;
+}
 #font-size-slider-div{
     width:20vw;
     margin-left: 3vw;

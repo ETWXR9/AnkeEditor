@@ -122,6 +122,13 @@ contextBridge.exposeInMainWorld(
             ipcRenderer.send(channel, data);
         }
     },
+    ShowAlert: (channel, data) => {
+        // whitelist channels
+        let validChannels = ["showalert"];
+        if (validChannels.includes(channel)) {
+            ipcRenderer.send(channel, data);
+        }
+    },
 }
 )
 

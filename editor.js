@@ -2,6 +2,7 @@
 
 
 
+
 Array.prototype.remove = function (item) {
     var index = this.indexOf(item);
     if (index > -1) {
@@ -36,6 +37,7 @@ let selectionOnBlur = null;
 
 //设置
 let configData = {};
+let useApi = false;
 
 
 //文本是否有未保存的改动
@@ -53,12 +55,10 @@ let contentUnsaved = {
     }
 }
 
-//是否隐藏历史栏
-let hideHistoryDiv = false;
 
 //输入框字体限制
 let maxFontSize = 50;
-let minFontSize = 10;   
+let minFontSize = 10;
 
 
 //封装换行逻辑，用于回车确认时临时注销
@@ -89,11 +89,12 @@ window.onload = () => {
         contentUnsaved.val = true;
     })
     fontSizeSlider = document.getElementById('font-size-slider');
-    fontSizeSlider.addEventListener('change',onFontSizeSliderChange);
+    fontSizeSlider.addEventListener('change', onFontSizeSliderChange);
 
     picSizeSlider = document.getElementById('pic-size-slider');
-    picSizeSlider.addEventListener('change',onPicSizeSliderChange);
-    document.getElementById('hide-history-button').addEventListener('click',onHideHistoryButtonClick);
+    picSizeSlider.addEventListener('change', onPicSizeSliderChange);
+    document.getElementById('hide-history-button').addEventListener('click', onHideHistoryButtonClick);
+    document.getElementById('add-name-button').addEventListener('click', onAddNameButtonClick);
     document.querySelector('#input-div').addEventListener("paste", (e) => {
         e.stopPropagation();
         e.preventDefault();
@@ -106,7 +107,7 @@ window.onload = () => {
         text = text.replace("<div>", "");
         text = text.replace("</div>", "<br/>");
         text = text.replace(/style="[^"]*"/gi, "");
-        console.log("粘贴数据："+text);
+        console.log("粘贴数据：" + text);
         if (document.queryCommandSupported('insertHTML')) {
             document.execCommand('insertHTML', false, text);
         } else {
@@ -114,7 +115,7 @@ window.onload = () => {
         }
     });
     document.onmousedown = e => {
-        if (e.target.className === 'pic-button') {
+        if (e.target.className === 'pic-button') {//插图逻辑
             e.preventDefault();
             //检查输入框是否焦点，防止插入图片到顶部。
             if (e.button == 0 && inputDiv === document.activeElement) {
@@ -122,7 +123,9 @@ window.onload = () => {
                 breakLine();
                 document.execCommand('insertImage', false, e.target.src);
                 breakLine();
-                // document.execCommand('insertText', false, e.target.parentNode.id + "：");
+                if (configData.addname == true) {
+                    document.execCommand('insertText', false, e.target.parentNode.id + "：");
+                }
             }
             //右键菜单，里面是删除
             if (e.button == 2) {
@@ -147,21 +150,25 @@ window.onload = () => {
 window.fs.GetConfig("getconfig", (config) => {
     configData = config;
     //读取APIKEY
-    configData.randomapi = config.randomapi?"":config.randomapi;
+    // console.log("config.randomapi: "+config.randomapi)
+    // configData.randomapi = config.randomapi?config.randomapi:"";
+    // console.log("configData.randomapi: "+configData.randomapi)
     //设置字体、图片
     fontSizeSlider.value = config.fontsizeslider;
     onFontSizeSliderChange();
     picSizeSlider.value = config.picsizeslider;
     onPicSizeSliderChange();
     //设置是否隐藏历史
-    hideHistoryDiv = !config.hidehistorydiv;
-    onHideHistoryButtonClick();
-   
+    onHideHistoryButtonClick(true);
+    //设置是否带人名
+    onAddNameButtonClick(true);
+
     if (config.randomapi == "") {
         console.log("未读取到API")
+        useApi = false;
         return 0;
     }
-    console.log("读取到API "+config.randomapi)
+    console.log("读取到API " + configData.randomapi)
     fetch("https://api.random.org/json-rpc/2/invoke", {
         method: "POST",
         headers: {
@@ -172,7 +179,7 @@ window.fs.GetConfig("getconfig", (config) => {
             "jsonrpc": "2.0",
             "method": "getUsage",
             "params": {
-                "apiKey": config.randomapi
+                "apiKey": configData.randomapi
             },
             "id": 15998
         })
@@ -185,12 +192,14 @@ window.fs.GetConfig("getconfig", (config) => {
             if (myJson.result) {
                 if (myJson.result.status == "running") {
                     console.log("成功验证APIKey");
-                    alert("成功验证APIKey");
+                    window.log.ShowAlert("showalert", ["成功验证APIKey", "好耶"]);
+                    useApi = true;
                     return 0;
                 }
             }
             console.log("验证APIKey失败");
-            alert("验证APIKey失败，将转换至普通随机");
+            window.log.ShowAlert("showalert", ["验证APIKey失败，将转换至普通随机", "坏耶"]);
+            useApi = false;
         });
 })
 
@@ -219,11 +228,11 @@ window.log.WinLog("winlog", (data) => {
 })
 
 //检查版本
-window.log.CheckVersion("checkversion",(result)=>{
-    document.getElementById("version-text").innerHTML = "<b>最新版本为"+result.data.name+" 点击下载</b>";
-    document.getElementById("version-text").addEventListener('click',e=>{
+window.log.CheckVersion("checkversion", (result) => {
+    document.getElementById("version-text").innerHTML = "<b>最新版本为" + result.data.name + " 点击下载</b>";
+    document.getElementById("version-text").addEventListener('click', e => {
         e.preventDefault();
-        window.log.OpenPage("openpage",result.data.html_url);
+        window.log.OpenPage("openpage", result.data.html_url);
     })
 })
 
@@ -246,8 +255,8 @@ window.fs.GetJson("getjson", (data) => {
     picDiv.innerHTML = "";
     //去重
     var uniqueArray = new Array;
-    data.data.forEach(chara=>{
-        if (uniqueArray.find(uniqueChara=>{return uniqueChara.name == chara.name})!=undefined) {
+    data.data.forEach(chara => {
+        if (uniqueArray.find(uniqueChara => { return uniqueChara.name == chara.name }) != undefined) {
             return;
         }
         uniqueArray.push(chara);
@@ -331,9 +340,9 @@ window.fs.GetJson("getjson", (data) => {
         if (e.keyCode === 13 && e.target.value != '') {
             e.preventDefault();
             //检查是否已经存在
-            if (checkedname.indexOf(e.target.value)!=-1) {
+            if (checkedname.indexOf(e.target.value) != -1) {
                 return;
-            }else if (sortedChara.find(name=>{return name == e.target.value}) == e.target.value) {
+            } else if (sortedChara.find(name => { return name == e.target.value }) == e.target.value) {
                 return;
             }
             checkedname.push(e.target.value);
@@ -400,7 +409,7 @@ window.clipboard.GetClip("getclip", (charaname, clipContent) => {
         });
         window.fs.SaveJson("savejson", ["picData.json", JSON.stringify(picData)]);
         loadPics();
-    }else if(regexp.test(clipContent[1])) {
+    } else if (regexp.test(clipContent[1])) {
         let chara = picData.data.find((item) => { return item.name == charaname });
         let urls = clipContent[1].match(regexp);
         urls.forEach(url => {
@@ -533,7 +542,7 @@ function setDiceInput() {
             e.preventDefault();
             let text = e.srcElement.value;
             //判空
-            if (text == "")return;
+            if (text == "") return;
 
             diceinput.readOnly = true;
             if (/^[1-9]\d{0,3}((\+|\-)[1-9]\d{0,3})*$/.test(text)) {
@@ -548,10 +557,20 @@ function setDiceInput() {
                 }
                 console.log("fixValue为" + fixValue);
 
-
-                if (configData.randomApiKey) {
+                if (useApi) {
                     //调用RANDOM.ORG，显示等待文字，删除dice元素，插入总和，记录历史
                     dicesum.innerText = dicesum.innerText + ` 正在获取随机数`;
+                    console.log("发送req" + JSON.stringify({
+                        "jsonrpc": "2.0",
+                        "method": "generateIntegers",
+                        "params": {
+                            "apiKey": configData.randomapi,
+                            "n": 1,
+                            "min": 1,
+                            "max": diceValue
+                        },
+                        "id": 1751
+                    }));
                     fetch("https://api.random.org/json-rpc/2/invoke", {
                         method: "POST",
                         headers: {
@@ -562,12 +581,10 @@ function setDiceInput() {
                             "jsonrpc": "2.0",
                             "method": "generateIntegers",
                             "params": {
-                                "apiKey": configData.randomApiKey,
+                                "apiKey": configData.randomapi,
                                 "n": 1,
                                 "min": 1,
-                                "max": diceValue,
-                                "replacement": true,
-                                "base": 10
+                                "max": diceValue
                             },
                             "id": 1751
                         })
@@ -575,13 +592,19 @@ function setDiceInput() {
                         return response.json();
                     })
                         .then(function (myJson) {
-                            console.log("取得randomAPI");
+                            console.log("取得random结果 " + JSON.stringify(myJson))
+                            if (myJson.error) {
+                                // dicesum.innerText = `获取失败！`;
+                                window.log.ShowAlert("showalert", ["获取随机数失败！请检查apikey或重试", "坏耶"]);
+                                dicediv.parentNode.removeChild(dicediv);
+                                return 0;
+                            }
                             //调用随机API，删除dice元素，插入总和，记录历史
                             let randomValue = myJson.result.random.data[0];
                             //结算
                             let randomResult = randomValue + fixValue;
                             dicediv.parentNode.removeChild(dicediv);
-                            console.log(`node is ${node},offset is ${offset}`)
+                            // console.log(`node is ${node},offset is ${offset}`)
                             // inputDiv.focus();
                             let newR = document.createRange();
                             // newR.selectNode(node);
@@ -683,30 +706,41 @@ function getCaretTopPoint() {
 }
 
 //点击按钮后将#history-div的flex-grow设为0，如果已经为0则设置为1.5;
-function onHideHistoryButtonClick(){
-    hideHistoryDiv = !hideHistoryDiv;
-    historyDiv.setAttribute("style",`flex-grow:${hideHistoryDiv?0:1.5};`);
-    configData.hidehistorydiv = hideHistoryDiv;
+function onHideHistoryButtonClick(update) {
+    console.log("点击历史button " + update)
+    if (update != true) {
+        configData.hideHistoryDiv = !configData.hideHistoryDiv;
+    }
+    historyDiv.setAttribute("style", `flex-grow:${configData.hideHistoryDiv ? 0 : 1.5};`);
     window.fs.SaveJson("savejson", ["config.json", JSON.stringify(configData)]);
 }
-
-function onFontSizeSliderChange(){
+//点击按钮后切换addName变量，改变按钮名字
+function onAddNameButtonClick(update) {
+    if (update != true) {
+        configData.addname = !configData.addname;
+    }
+    if (configData.addname) {
+        document.getElementById('add-name-button').innerText = "现在插图带人名";
+    } else { document.getElementById('add-name-button').innerText = "现在插图不带人名"; }
+    window.fs.SaveJson("savejson", ["config.json", JSON.stringify(configData)]);
+}
+function onFontSizeSliderChange() {
     let v = fontSizeSlider.value;
     configData.fontsizeslider = v;
-    let size = Math.floor(v/100*(maxFontSize-minFontSize)+minFontSize);
+    let size = Math.floor(v / 100 * (maxFontSize - minFontSize) + minFontSize);
     // console.log("fontsliderChange");
-    inputDiv.setAttribute("style",`font-size: ${size}px;`);
+    inputDiv.setAttribute("style", `font-size: ${size}px;`);
     window.fs.SaveJson("savejson", ["config.json", JSON.stringify(configData)]);
 }
 
-function onPicSizeSliderChange(){
+function onPicSizeSliderChange() {
     let v = picSizeSlider.value;
     configData.picsizeslider = v;
     let size = 0;
-    console.log("picsizesliderchange to "+v);
-    console.log("picsizefloor to "+Math.floor(v/20));
+    console.log("picsizesliderchange to " + v);
+    console.log("picsizefloor to " + Math.floor(v / 20));
     // console.log("picsliderChange");
-    switch (Math.floor(v/20)) {
+    switch (Math.floor(v / 20)) {
         case 0:
             size = "14.9%";
             break;
