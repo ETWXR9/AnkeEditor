@@ -545,13 +545,14 @@ function setDiceInput() {
             //判空
             if (text == "") return;
 
-            diceinput.readOnly = true;
+            
             if (/^[1-9]\d{0,3}((\+|\-)[1-9]\d{0,3})*$/.test(text)) {
+                //通过测试，关闭输入
+                diceinput.readOnly = true;
                 //通过测试，提取第一个数，剩下部分进行eval计算。
                 let diceValue = parseInt(text.match(/^[1-9]\d*/));;
                 console.log("dicValue为" + diceValue);
                 fixtext = text.replace(/^[1-9]\d{0,3}/, "");
-                console.log("fixtext为" + fixtext)
                 let fixValue = 0;
                 if (fixtext != "") {
                     fixValue = eval(fixtext);
