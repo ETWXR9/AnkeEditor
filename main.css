@@ -100,7 +100,7 @@ body,html{
     width: 0;
 }
 #input-div > img{
-    width: 100%;    
+    max-width: 100%;    
 }
 #picture-div{
     border-left: 2px solid black;
