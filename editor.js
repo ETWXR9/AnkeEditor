@@ -11,7 +11,8 @@ Array.prototype.remove = function (item) {
 };
 
 
-
+//maindiv
+let maindiv = null
 //输入栏
 let inputDiv = null;
 
@@ -26,6 +27,10 @@ let picData = null;
 //piccheckform
 let checkedname = [];
 
+//font-color-input
+let fontColorInput = null;
+//background-color-input
+let backgroundColorInput = null;
 //font-size-slider
 let fontSizeSlider = null;
 
@@ -80,7 +85,7 @@ function breakLineEvent(e) {
 //load事件，修正回车换行，添加图片插入功能和删除菜单。加载图片栏
 window.onload = () => {
 
-
+    maindiv = document.getElementById('main-div')
     inputDiv = document.getElementById('input-div');
     historyDiv = document.getElementById('history-div');
     picDiv = document.getElementById('picture-div');
@@ -88,8 +93,14 @@ window.onload = () => {
     inputDiv.addEventListener('input', e => {
         contentUnsaved.val = true;
     })
+    fontColorInput = document.getElementById('font-color-input');
+    fontColorInput.addEventListener("change", onFontColorInputChange)
+    backgroundColorInput = document.getElementById('background-color-input');
+    backgroundColorInput.addEventListener("change", onBackgroundColorInputChange)
+
     fontSizeSlider = document.getElementById('font-size-slider');
     fontSizeSlider.addEventListener('change', onFontSizeSliderChange);
+
 
     picSizeSlider = document.getElementById('pic-size-slider');
     picSizeSlider.addEventListener('change', onPicSizeSliderChange);
@@ -121,7 +132,6 @@ window.onload = () => {
             //检查输入框是否焦点，防止插入图片到顶部。
             if (e.button == 0 && inputDiv === document.activeElement) {
                 inputDiv.focus();
-                breakLine();
                 document.execCommand('insertImage', false, e.target.src);
                 breakLine();
                 if (configData.addname == true) {
@@ -155,6 +165,10 @@ window.fs.GetConfig("getconfig", (config) => {
     // configData.randomapi = config.randomapi?config.randomapi:"";
     // console.log("configData.randomapi: "+configData.randomapi)
     //设置字体、图片
+    fontColorInput.value = config.fontColor;
+    backgroundColorInput.value = config.backgroundColor ?? "#f5deb3";
+    onFontColorInputChange();
+    onBackgroundColorInputChange();
     fontSizeSlider.value = config.fontsizeslider;
     onFontSizeSliderChange();
     picSizeSlider.value = config.picsizeslider;
@@ -507,9 +521,9 @@ function setDiceInput() {
     const node = r.endContainer;
     const offset = r.endOffset;
 
-    console.log("执行setDiceInput")
+    // console.log("执行setDiceInput")
     let pos = getCaretTopPoint();
-    console.log("取得光标位置" + pos.left + "," + pos.top)
+    // console.log("取得光标位置" + pos.left + "," + pos.top)
     let dicediv = document.createElement('div');
     dicediv.className = "dice-div";
     const maindiv = document.querySelector('#main-div');
@@ -731,7 +745,8 @@ function onFontSizeSliderChange() {
     configData.fontsizeslider = v;
     let size = Math.floor(v / 100 * (maxFontSize - minFontSize) + minFontSize);
     // console.log("fontsliderChange");
-    inputDiv.setAttribute("style", `font-size: ${size}px;`);
+    // inputDiv.setAttribute("style", `font-size: ${size}px;`);
+    inputDiv.style.setProperty("--size", `${size}px`);
     window.fs.SaveJson("savejson", ["config.json", JSON.stringify(configData)]);
 }
 
@@ -763,5 +778,17 @@ function onPicSizeSliderChange() {
             break;
     }
     document.documentElement.style.setProperty('--item-width', size);
+    window.fs.SaveJson("savejson", ["config.json", JSON.stringify(configData)]);
+}
+function onFontColorInputChange(){
+    let v = fontColorInput.value;
+    configData.fontColor = v;
+    inputDiv.style.setProperty("--color", v);
+    window.fs.SaveJson("savejson", ["config.json", JSON.stringify(configData)]);
+}
+function onBackgroundColorInputChange(){
+    let v = backgroundColorInput.value;
+    configData.backgroundColor = v;
+    maindiv.style.setProperty("--color", v);
     window.fs.SaveJson("savejson", ["config.json", JSON.stringify(configData)]);
 }

@@ -6,12 +6,13 @@ body,html{
     margin:0;
 }
 #main-div{
+    --color : #f5deb3;
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
     height: 98vh;
     width: 100vw;
-    background-color: wheat;
+    background-color: var(--color);
 }
 
 #top-div{
@@ -34,6 +35,18 @@ body,html{
     margin-left: 3vw;
     margin-right: 3vw;
     border-radius: 10px;
+    align-self: center;
+    
+}
+
+#font-color-input{
+    width: 16px;
+    height: 16px;
+    align-self: center;
+}
+#background-color-input{
+    width: 16px;
+    height: 16px;
     align-self: center;
 }
 #font-size-slider-div{
@@ -74,6 +87,10 @@ body,html{
 }
 
 #input-div{
+    --color : #000000;
+    --size : 23px;
+    color: var(--color);
+    font-size: var(--size);
     display: inline-block;
     padding:1em;
     padding-bottom: 30vh;
@@ -81,6 +98,9 @@ body,html{
     overflow-x: hidden;
     flex-grow: 3.5;
     width: 0;
+}
+#input-div > img{
+    width: 100%;    
 }
 #picture-div{
     border-left: 2px solid black;
