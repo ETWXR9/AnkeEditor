@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld(
             ipcRenderer.send(channel, data);
         }
     },
+    
     GetContentAndSave: (channel, func) => {
         let validChannels = ["getcontentandsave"];
         if (validChannels.includes(channel)) {

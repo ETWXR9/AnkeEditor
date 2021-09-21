@@ -63,6 +63,24 @@ function SaveFile(content) {
 
 const menutemp = [
     {
+        label: '新建',
+        accelerator: 'CmdOrCtrl+N',
+        click() { 
+            if (contentUnsave) {
+                const options = {
+                    type: "none",
+                    buttons: ["确定"],
+                    title: "提示",
+                    message: "请先保存"
+                }
+                dialog.showMessageBox(win, options)
+                return
+            }
+            filePath = ""
+            win.webContents.send("newcontent") 
+        }
+    },
+    {
         label: '读取',
         click() {
             const options = {

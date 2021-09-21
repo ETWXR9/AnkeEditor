@@ -127,7 +127,8 @@ window.onload = () => {
         }
     });
     document.onmousedown = e => {
-        if (e.target.className === 'pic-button') {//插图逻辑
+        //插图逻辑
+        if (e.target.className === 'pic-button') {
             e.preventDefault();
             //检查输入框是否焦点，防止插入图片到顶部。
             if (e.button == 0 && inputDiv === document.activeElement) {
