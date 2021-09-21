@@ -510,6 +510,7 @@ window.fs.LoadContent("loadcontent", (data) => {
 //新建
 window.fs.NewContent('newcontent', () => {
     inputDiv.innerHTML = "";
+    historyDiv.innerHTML = "";
 })
 
 
