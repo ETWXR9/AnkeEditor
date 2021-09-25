@@ -785,12 +785,12 @@ function onPicSizeSliderChange() {
 function onFontColorInputChange(){
     let v = fontColorInput.value;
     configData.fontColor = v;
-    inputDiv.style.setProperty("--color", v);
+    inputDiv.style.setProperty("--inputfontcolor", v);
     window.fs.SaveJson("savejson", ["config.json", JSON.stringify(configData)]);
 }
 function onBackgroundColorInputChange(){
     let v = backgroundColorInput.value;
     configData.backgroundColor = v;
-    maindiv.style.setProperty("--color", v);
+    maindiv.style.setProperty("--maincolor", v);
     window.fs.SaveJson("savejson", ["config.json", JSON.stringify(configData)]);
 }

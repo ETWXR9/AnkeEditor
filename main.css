@@ -6,13 +6,13 @@ body,html{
     margin:0;
 }
 #main-div{
-    --color : #f5deb3;
+    --maincolor : #f5deb3;
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
     height: 98vh;
     width: 100vw;
-    background-color: var(--color);
+    background-color: var(--maincolor);
 }
 
 #top-div{
@@ -87,9 +87,9 @@ body,html{
 }
 
 #input-div{
-    --color : #000000;
+    --inputfontcolor : #000000;
     --size : 23px;
-    color: var(--color);
+    color: var(--inputfontcolor);
     font-size: var(--size);
     display: inline-block;
     padding:1em;
