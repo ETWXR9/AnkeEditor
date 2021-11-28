@@ -83,6 +83,15 @@ const menutemp = [
     {
         label: '读取',
         click() {
+            if (contentUnsave) {
+                const optionsSave = {
+                    type: "none",
+                    buttons: ["确定"],
+                    title: "提示",
+                    message: "注意，存在未保存的内容"
+                }
+                dialog.showMessageBoxSync(win, optionsSave)
+            }
             const options = {
                 title: "读取",
                 defaultPath: process.env.PORTABLE_EXECUTABLE_DIR,
