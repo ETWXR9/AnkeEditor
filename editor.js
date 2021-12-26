@@ -110,15 +110,12 @@ window.onload = () => {
         e.stopPropagation();
         e.preventDefault();
         var text = '', event = (e.originalEvent || e);
-        // if (event.clipboardData && event.clipboardData.getData) {
-        //     text = event.clipboardData.getData('text/html');
-        // } else if (window.clipboardData && window.clipboardData.getData) {
-        //     text = window.clipboardData.getData('Text');
-        // }
         text = event.clipboardData.getData('text/html')?event.clipboardData.getData('text/html'):event.clipboardData.getData('Text');
-        text = text.replace("<div>", "");
-        text = text.replace("</div>", "<br/>");
-        text = text.replace(/style="[^"]*"/gi, "");
+        console.log("复制数据：" + text);
+        text = text.replace(/<br[^>]*>/g,"<br>");
+        text = text.replace(/\<(?!img|br).*?\>/g,"");
+        text = text.replace(/&nbsp;/g,"");
+        text = text.replace(/(\r\n|\n|\r)/gm, "");
         console.log("粘贴数据：" + text);
         if (document.queryCommandSupported('insertHTML')) {
             document.execCommand('insertHTML', false, text);

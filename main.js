@@ -27,6 +27,7 @@ app.whenReady().then(() => {
     });
     win.loadFile('index.html');
     Menu.setApplicationMenu(Menu.buildFromTemplate(menutemp));
+
     // win.webContents.openDevTools();
     win.on('close', (e) => {
         if (contentUnsave) {
@@ -39,6 +40,10 @@ app.whenReady().then(() => {
 
 app.on('window-adll-closed', () => {
     app.quit();
+})
+
+app.on("ready",()=>{
+    app.setAppUserModelId("et.electron.editor");
 })
 
 
