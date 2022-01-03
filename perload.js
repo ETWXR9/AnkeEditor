@@ -39,6 +39,18 @@ contextBridge.exposeInMainWorld(
             ipcRenderer.send(channel, data);
         }
     },
+    GetHtmlandExport: (channel, func) => {
+        let validChannels = ["gethtmlandexport"];
+        if (validChannels.includes(channel)) {
+            ipcRenderer.on(channel, (event, ...args) => func(...args));
+        }
+    },
+    SendHtmlandExport: (channel, data) => {
+        let validChannels = ["sendhtmlandexport"];
+        if (validChannels.includes(channel)) {
+            ipcRenderer.send(channel, data);
+        }
+    },
     OnQuit:
         (channel, func) => {
             let validChannels = ["onquit"];

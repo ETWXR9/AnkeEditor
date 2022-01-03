@@ -89,6 +89,7 @@ body,html{
 #input-div{
     --inputfontcolor : #000000;
     --size : 23px;
+    white-space: pre-wrap;
     color: var(--inputfontcolor);
     font-size: var(--size);
     display: inline-block;

@@ -4,6 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const RandomOrg = require('random-org');
 const { request } = require("@octokit/request");
+const iconv = require('iconv-lite');
 
 let win;
 
@@ -34,7 +35,7 @@ app.whenReady().then(() => {
             e.preventDefault();
             win.webContents.send("onquit")
         }
-        
+
     })
 })
 
@@ -42,7 +43,7 @@ app.on('window-adll-closed', () => {
     app.quit();
 })
 
-app.on("ready",()=>{
+app.on("ready", () => {
     app.setAppUserModelId("et.electron.editor");
 })
 
@@ -64,13 +65,25 @@ function SaveFile(content) {
         }
     }
 }
-
+//导出为html
+function ExportHtml(content) {
+    const options = {
+        title: "导出为HTML文件",
+        defaultPath: process.env.PORTABLE_EXECUTABLE_DIR,
+        filters:[{name:'HTML文件',extensions:['html']}],
+    }
+    let result = dialog.showSaveDialogSync(null, options);
+    if (result) {
+        content = iconv.encode(content,"GBK")
+        fs.writeFileSync(result, content);
+    }
+}
 
 const menutemp = [
     {
         label: '新建',
         accelerator: 'CmdOrCtrl+N',
-        click() { 
+        click() {
             if (contentUnsave) {
                 const options = {
                     type: "none",
@@ -82,7 +95,7 @@ const menutemp = [
                 return
             }
             filePath = ""
-            win.webContents.send("newcontent") 
+            win.webContents.send("newcontent")
         }
     },
     {
@@ -118,24 +131,28 @@ const menutemp = [
         click() { win.webContents.send("getcontentandsave") }
     },
     {
+        label: '导出HTML',
+        click() { win.webContents.send("gethtmlandexport") }
+    },
+    {
         label: '开发者工具',
         click() { win.webContents.openDevTools(); }
     },
 ]
 
-ipcMain.on('loadconfig',(event,args)=>{
-        //读取config
-        let configJson;
-        if (app.isPackaged) {
-            configJson = fs.readFileSync(process.env.PORTABLE_EXECUTABLE_DIR + "/config.json", "utf-8");
-        } else {
-            configJson = fs.readFileSync("config.json", "utf-8");
-        }
-        configJsonParse = JSON.parse(configJson);
-        win.webContents.send("winlog", "读取config文件结果" + configJson);
-        win.webContents.send("getconfig",configJsonParse);
+ipcMain.on('loadconfig', (event, args) => {
+    //读取config
+    let configJson;
+    if (app.isPackaged) {
+        configJson = fs.readFileSync(process.env.PORTABLE_EXECUTABLE_DIR + "/config.json", "utf-8");
+    } else {
+        configJson = fs.readFileSync("config.json", "utf-8");
+    }
+    configJsonParse = JSON.parse(configJson);
+    win.webContents.send("winlog", "读取config文件结果" + configJson);
+    win.webContents.send("getconfig", configJsonParse);
 
-        CheckVersion();
+    CheckVersion();
 })
 
 ipcMain.on('contentunsavechange', (event, args) => {
@@ -154,6 +171,9 @@ ipcMain.on('contentunsavechange', (event, args) => {
 
 ipcMain.on("sendcontentandsave", (event, args) => {
     SaveFile(args);
+})
+ipcMain.on("sendhtmlandexport", (event, args) => {
+    ExportHtml(args);
 })
 
 ipcMain.on("saveandquit", (event, args) => {
@@ -216,7 +236,7 @@ ipcMain.on("saveconfig", (event, args) => {
 ipcMain.on("readclip", (event, charaname) => {
     let clipcontentPlain = clipboard.readText();
     let clipcontentHTML = clipboard.readHTML();
-    let clipcontent = [clipcontentHTML,clipcontentPlain];
+    let clipcontent = [clipcontentHTML, clipcontentPlain];
     // Send result back to renderer process
     win.webContents.send("getclip", charaname, clipcontent);
 });
@@ -252,13 +272,13 @@ ipcMain.on("reqrandom", (event, dicevalue) => {
 
 
 //检查更新
-function CheckVersion(){
+function CheckVersion() {
     win.webContents.send("winlog", "读取github中");
     request('GET /repos/{owner}/{repo}/releases/latest', {
         owner: 'ETWXR9',
         repo: 'AnkeEditor'
-      }).then(function (result) {
-        win.webContents.send("checkversion",result);
+    }).then(function (result) {
+        win.webContents.send("checkversion", result);
     });
 
 

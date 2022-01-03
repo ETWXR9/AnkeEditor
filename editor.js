@@ -1,8 +1,5 @@
 
 
-
-
-
 Array.prototype.remove = function (item) {
     var index = this.indexOf(item);
     if (index > -1) {
@@ -26,7 +23,7 @@ let picData = null;
 
 //piccheckform
 let checkedname = [];
-
+let checkform = null;
 //font-color-input
 let fontColorInput = null;
 //background-color-input
@@ -67,7 +64,6 @@ let minFontSize = 10;
 
 
 //封装换行逻辑，用于回车确认时临时注销
-
 function breakLineEvent(e) {
     if (e.keyCode === 13) {
         e.preventDefault();
@@ -79,43 +75,55 @@ function breakLineEvent(e) {
     if (e.ctrlKey && e.keyCode === 68) {
         setDiceInput();
     }
+    if (e.ctrlKey && e.keyCode === 81) {
+        insert10Index();
+    }
 }
 
 
-//load事件，修正回车换行，添加图片插入功能和删除菜单。加载图片栏
+//加载时取得元素，注册各类事件
 window.onload = () => {
 
     maindiv = document.getElementById('main-div')
     inputDiv = document.getElementById('input-div');
     historyDiv = document.getElementById('history-div');
     picDiv = document.getElementById('picture-div');
+    checkform = document.querySelector('#pic-check-form');
+    //换行逻辑
     inputDiv.addEventListener('keydown', breakLineEvent);
+    //未保存改动状态逻辑
     inputDiv.addEventListener('input', e => {
         contentUnsaved.val = true;
     })
+    //字体颜色
     fontColorInput = document.getElementById('font-color-input');
     fontColorInput.addEventListener("change", onFontColorInputChange)
+    //背景颜色
     backgroundColorInput = document.getElementById('background-color-input');
     backgroundColorInput.addEventListener("change", onBackgroundColorInputChange)
-
+    //字体大小
     fontSizeSlider = document.getElementById('font-size-slider');
     fontSizeSlider.addEventListener('change', onFontSizeSliderChange);
 
-
+    //图片大小
     picSizeSlider = document.getElementById('pic-size-slider');
     picSizeSlider.addEventListener('change', onPicSizeSliderChange);
+    //隐藏骰子历史侧边栏
     document.getElementById('hide-history-button').addEventListener('click', onHideHistoryButtonClick);
+    //人物名称自动补全开关
     document.getElementById('add-name-button').addEventListener('click', onAddNameButtonClick);
+    //粘贴逻辑
     document.querySelector('#input-div').addEventListener("paste", (e) => {
         e.stopPropagation();
         e.preventDefault();
         var text = '', event = (e.originalEvent || e);
-        text = event.clipboardData.getData('text/html')?event.clipboardData.getData('text/html'):event.clipboardData.getData('Text');
+        text = event.clipboardData.getData('text/html') ? event.clipboardData.getData('text/html') : event.clipboardData.getData('Text');
         console.log("复制数据：" + text);
-        text = text.replace(/<br[^>]*>/g,"<br>");
-        text = text.replace(/\<(?!img|br).*?\>/g,"");
-        text = text.replace(/&nbsp;/g,"");
+        text = text.replace(/<br[^>]*>/g, "<br>");
+        text = text.replace(/\<(?!img|br).*?\>/g, "");
+        text = text.replace(/&nbsp;/g, "");
         text = text.replace(/(\r\n|\n|\r)/gm, "");
+        text = text.replace(/style="[^"]*"/gi, "");
         console.log("粘贴数据：" + text);
         if (document.queryCommandSupported('insertHTML')) {
             document.execCommand('insertHTML', false, text);
@@ -123,6 +131,7 @@ window.onload = () => {
             document.execCommand('paste', false, text);
         }
     });
+    //各类鼠标事件
     document.onmousedown = e => {
         //插图逻辑
         if (e.target.className === 'pic-button') {
@@ -150,6 +159,7 @@ window.onload = () => {
             }
         }
     }
+
     loadPics();
     window.fs.LoadConfig("loadconfig");
 }
@@ -262,7 +272,6 @@ window.log.CheckVersion("checkversion", (result) => {
 window.fs.GetJson("getjson", (data) => {
     picData = data;
     //先清除check栏
-    const checkform = document.querySelector('#pic-check-form');
     checkform.innerHTML = "";
     //再清除picdiv
     picDiv.innerHTML = "";
@@ -276,11 +285,11 @@ window.fs.GetJson("getjson", (data) => {
     })
     data.data = uniqueArray;
 
-    //按字母排序
+    //按字母排序 1.4更新不再自动排序
     var sortedChara = data.data;
-    sortedChara = sortedChara.sort(function compareFunction(item1, item2) {
-        return item1.name.localeCompare(item2.name);
-    });
+    // sortedChara = sortedChara.sort(function compareFunction(item1, item2) {
+    //     return item1.name.localeCompare(item2.name);
+    // });
     //根据picdata生成check栏
     sortedChara.forEach(chara => {
         //创建新的label
@@ -309,8 +318,6 @@ window.fs.GetJson("getjson", (data) => {
 
 
                 // newDiv添加drop事件，每个item判断为图片后，作为url数组fetch至sm，newDiv背景变红，fetch取得后挨个push入chara，保存，重载
-
-
 
                 newcharadiv.before(newDiv);
                 //创建人物标题
@@ -400,6 +407,8 @@ window.fs.GetJson("getjson", (data) => {
         // let index_chara = picData.data.indexOf(chara);
         addbutton.onclick = () => { addPicFromClip(addbutton, chara.name); };
     });
+    //加载拖动排序逻辑
+    dragSortInit();
 });
 
 
@@ -444,14 +453,14 @@ function addChara(charaname) {
     newchara.name = charaname;
     newchara.pics = [];
     console.log("添加新人物" + newchara);
-    picData.data.push(newchara);
+    picData.data.unshift(newchara);
     window.fs.SaveJson("savejson", ["picData.json", JSON.stringify(picData)]);
     loadPics();
 }
 
 //删除图片(args为[charaname,src])
 function deletePic(args) {
-    console.log("deletePic函数里的是" + args);
+    // console.log("deletePic函数里的是" + args);
     let charaname = args[1];
     // picData.data[charaindex].pics.remove(picData.data[charaindex].pics[index[0]]);
     picData.data.find((item) => { return item.name == charaname }).pics.remove(args[0]);
@@ -558,7 +567,7 @@ function setDiceInput() {
             //判空
             if (text == "") return;
 
-            
+
             if (/^[1-9]\d{0,3}((\+|\-)[1-9]\d{0,3})*$/.test(text)) {
                 //通过测试，关闭输入
                 diceinput.readOnly = true;
@@ -779,15 +788,143 @@ function onPicSizeSliderChange() {
     document.documentElement.style.setProperty('--item-width', size);
     window.fs.SaveJson("savejson", ["config.json", JSON.stringify(configData)]);
 }
-function onFontColorInputChange(){
+function onFontColorInputChange() {
     let v = fontColorInput.value;
     configData.fontColor = v;
     inputDiv.style.setProperty("--inputfontcolor", v);
     window.fs.SaveJson("savejson", ["config.json", JSON.stringify(configData)]);
 }
-function onBackgroundColorInputChange(){
+function onBackgroundColorInputChange() {
     let v = backgroundColorInput.value;
     configData.backgroundColor = v;
     maindiv.style.setProperty("--maincolor", v);
     window.fs.SaveJson("savejson", ["config.json", JSON.stringify(configData)]);
 }
+
+//编码转换用于HTML输出
+function UTF8ToGB2312(str1) {
+    var substr = "";
+    var a = "";
+    var b = "";
+    var c = "";
+    var i = -1;
+    i = str1.indexOf("%");
+    if (i == -1) {
+        return str1;
+    }
+    while (i != -1) {
+        if (i < 3) {
+            substr = substr + str1.substr(0, i - 1);
+            str1 = str1.substr(i + 1, str1.length - i);
+            a = str1.substr(0, 2);
+            str1 = str1.substr(2, str1.length - 2);
+            if (parseInt("0x" + a) & 0x80 == 0) {
+                substr = substr + String.fromCharCode(parseInt("0x" + a));
+            }
+            else if (parseInt("0x" + a) & 0xE0 == 0xC0) { //two byte
+                b = str1.substr(1, 2);
+                str1 = str1.substr(3, str1.length - 3);
+                var widechar = (parseInt("0x" + a) & 0x1F) << 6;
+                widechar = widechar | (parseInt("0x" + b) & 0x3F);
+                substr = substr + String.fromCharCode(widechar);
+            }
+            else {
+                b = str1.substr(1, 2);
+                str1 = str1.substr(3, str1.length - 3);
+                c = str1.substr(1, 2);
+                str1 = str1.substr(3, str1.length - 3);
+                var widechar = (parseInt("0x" + a) & 0x0F) << 12;
+                widechar = widechar | ((parseInt("0x" + b) & 0x3F) << 6);
+                widechar = widechar | (parseInt("0x" + c) & 0x3F);
+                substr = substr + String.fromCharCode(widechar);
+            }
+        }
+        else {
+            substr = substr + str1.substring(0, i);
+            str1 = str1.substring(i);
+        }
+        i = str1.indexOf("%");
+    }
+
+    return substr + str1;
+};
+
+//拖动排序
+function dragSortInit() {
+    const lis = document.querySelector("#pic-check-form").children;
+    let draggingElementOrder;
+    let draggingElement;
+    for (let i = 0; i < lis.length; i++) {
+        lis[i].setAttribute("draggable", true);
+        lis[i].addEventListener("dragstart", (event) => {
+            draggingElement = event.target;
+        });
+
+        lis[i].addEventListener("dragenter", (event) => {
+            //每次都要新计算，因为有可能已经换位了
+            draggingElementOrder = Array.from(draggingElement.parentElement.children).indexOf(draggingElement);
+            const node = event.target;
+            //限制拖动目标的节点类型
+            if (node.className != "chara-label") {
+                return;
+            }
+            // console.log(node);
+            draggingElementPosition = draggingElement.getBoundingClientRect();
+            const order = Array.from(node.parentElement.children).indexOf(node);
+            //从大的序号移入到小的序号
+            if (draggingElementOrder > order) {
+                node.parentElement.insertBefore(draggingElement, node);
+            }
+            //从小的序号移入到大的序号
+            else {
+                //节点不是最后一个
+                if (node.nextElementSibling) {
+                    node.parentElement.insertBefore(draggingElement, node.nextElementSibling);
+                }
+                // 节点是最后一个了，不能再用insertBefore
+                else {
+                    node.parentElement.appendChild(draggingElement);
+                }
+            }
+        });
+        lis[i].addEventListener("dragend", (event) => {
+            //保存排序到picData
+            var newCharaArray = new Array;
+            let lisAfter = document.querySelector("#pic-check-form").children;
+            for (let j = 0; j < lisAfter.length; j++) {
+                let charaName = lisAfter[j].children[1].textContent;
+                let charaData = picData.data.find((item) => { return item.name == charaName });
+                newCharaArray.push(charaData);
+            }
+            picData.data = newCharaArray;
+            window.fs.SaveJson("savejson", ["picData.json", JSON.stringify(picData)]);
+        });
+    }
+
+}
+
+//插入序号1.0版
+function insert10Index() {
+    let sel = document.getSelection();
+    const r = sel.getRangeAt(0)
+    const node = r.endContainer;
+    const offset = r.endOffset;
+    let newR = document.createRange();
+    // newR.selectNode(node);
+    newR.setStart(node, offset);
+    newR.setEnd(node, offset);
+    for (let i = 10; i > 0; i--) {
+        newR.insertNode(document.createElement("br"));       
+        newR.insertNode(document.createTextNode(i+"."));
+    }
+    newR.insertNode(document.createElement("br"));  
+    // let finalText = "1.<br>2.\n3.\n4.\n5.\n6.\n7.\n8.\n9.\n10."
+    sel.removeAllRanges()
+    sel.addRange(newR)
+    newR.collapse(false);
+}
+
+//导出为HTML
+window.fs.GetHtmlandExport("gethtmlandexport", (data) => {
+    window.fs.SendHtmlandExport("sendhtmlandexport", inputDiv.innerHTML);
+})
