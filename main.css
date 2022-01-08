@@ -101,7 +101,11 @@ body,html{
     width: 0;
 }
 #input-div > img{
-    max-width: 100%;    
+    max-width: 100%;
+}
+#search{
+    top:0;
+    right: 0;
 }
 #picture-div{
     border-left: 2px solid black;

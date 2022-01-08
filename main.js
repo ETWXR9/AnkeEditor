@@ -7,6 +7,7 @@ const { request } = require("@octokit/request");
 const iconv = require('iconv-lite');
 
 let win;
+let searchwin;
 
 let filePath = "";
 
@@ -27,8 +28,9 @@ app.whenReady().then(() => {
         }
     });
     win.loadFile('index.html');
-    Menu.setApplicationMenu(Menu.buildFromTemplate(menutemp));
-
+    Menu.setApplicationMenu(null)
+    win.setMenu(Menu.buildFromTemplate(menutemp));
+    win.maximize();
     // win.webContents.openDevTools();
     win.on('close', (e) => {
         if (contentUnsave) {
@@ -37,6 +39,36 @@ app.whenReady().then(() => {
         }
 
     })
+    searchwin = new BrowserWindow({
+        parent: win,
+        width: 300, height: 50,
+        maximizable: false, minimizable: false,
+        frame :false,
+        transparent: true,
+        useContentSize :true,
+        webPreferences: {
+            worldSafeExecuteJavaScript: true,
+            contextIsolation: true,
+            nodeIntegration: true,
+            enableRemoteModule: false, // turn off remote
+            preload: path.join(__dirname, './perload.js') // use a preload script
+        }
+    })
+    searchwin.loadFile('searchPage.html');
+    searchwin.hide();
+    searchwin.on("close", (evt) => {
+        evt.preventDefault();    // This will cancel the close
+        searchwin.hide();
+        win.webContents.stopFindInPage("activateSelection");
+        win.focus();
+        
+    });
+    // searchwin.webContents.openDevTools();
+    searchwin.on('blur', function() {
+        searchwin.hide();
+        win.webContents.stopFindInPage("activateSelection");
+        win.focus();
+      })
 })
 
 app.on('window-adll-closed', () => {
@@ -70,11 +102,11 @@ function ExportHtml(content) {
     const options = {
         title: "导出为HTML文件",
         defaultPath: process.env.PORTABLE_EXECUTABLE_DIR,
-        filters:[{name:'HTML文件',extensions:['html']}],
+        filters: [{ name: 'HTML文件', extensions: ['html'] }],
     }
     let result = dialog.showSaveDialogSync(null, options);
     if (result) {
-        content = iconv.encode(content,"GBK")
+        content = iconv.encode(content, "GBK")
         fs.writeFileSync(result, content);
     }
 }
@@ -128,12 +160,21 @@ const menutemp = [
     {
         label: '保存',
         accelerator: 'CmdOrCtrl+S',
-        click() { win.webContents.send("getcontentandsave") }
+        click() { win.webContents.send("getcontentandsave"); }
     },
     {
         label: '导出HTML',
         click() { win.webContents.send("gethtmlandexport") }
     },
+    {
+        label: '功能',
+        submenu: [{
+            label: '搜索',
+            accelerator: 'CmdOrCtrl+F',
+            click() {
+                searchwin.show();
+        }}]
+        },
     {
         label: '开发者工具',
         click() { win.webContents.openDevTools(); }
@@ -299,4 +340,13 @@ ipcMain.on("showalert", (event, msg) => {
     }
     dialog.showMessageBox(win, options)
 });
+//搜索
+ipcMain.on("searchinpagesend", (event, text) => {
+    // console.log("搜索 " +text);
+    if (text!="") {
+        win.webContents.findInPage(text);
+    }
+});
+
+
 

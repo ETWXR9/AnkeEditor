@@ -94,6 +94,18 @@ contextBridge.exposeInMainWorld(
             ipcRenderer.send(channel, data);
         }
     },
+    SearchInPageSend:(channel, data) => {
+        let validChannels = ["searchinpagesend"];
+        if (validChannels.includes(channel)) {
+            ipcRenderer.send(channel, data);
+        }
+    },
+    SearchInPageOn: (channel, func) => {
+        let validChannels = ["searchinpageon"];
+        if (validChannels.includes(channel)) {
+            ipcRenderer.on(channel, (event, ...args) => func(...args));
+        }
+    },
 }
 );
 contextBridge.exposeInMainWorld(

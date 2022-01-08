@@ -119,11 +119,19 @@ window.onload = () => {
         var text = '', event = (e.originalEvent || e);
         text = event.clipboardData.getData('text/html') ? event.clipboardData.getData('text/html') : event.clipboardData.getData('Text');
         console.log("复制数据：" + text);
+        text = CleanWordHTML(text);
+
+        //简化br标签
         text = text.replace(/<br[^>]*>/g, "<br>");
-        text = text.replace(/\<(?!img|br).*?\>/g, "");
+        //清理空格，防止复制时多余空格
         text = text.replace(/&nbsp;/g, "");
+        //去掉所有\n，防止复制时多出行
         text = text.replace(/(\r\n|\n|\r)/gm, "");
+        //清理所有style
         text = text.replace(/style="[^"]*"/gi, "");
+        //清理掉格式清理后残留的空div
+        text = text.replace(/<div ><\/div>/g, "");
+
         console.log("粘贴数据：" + text);
         if (document.queryCommandSupported('insertHTML')) {
             document.execCommand('insertHTML', false, text);
@@ -304,6 +312,7 @@ window.fs.GetJson("getjson", (data) => {
         checkbox.value = chara.name;
         checkbox.className = 'pic-checkbox';
         checkbox.id = chara.name + 'checkbox';
+        //勾选人物逻辑
         checkbox.addEventListener('change', function () {
             if (this.checked) {
                 //加入checkedname
@@ -449,6 +458,17 @@ function addPicFromClip(target, charaname) {
 
 //添加新人物 将其name加入checkedname
 function addChara(charaname) {
+    //去重
+    let existChara = document.getElementById(charaname + 'checkbox')
+    if (existChara) {
+        if (!existChara.checked) {
+            console.log(existChara);
+            existChara.checked = true;
+            existChara.dispatchEvent(new Event('change'));
+        }
+        return;
+    }
+
     let newchara = {};
     newchara.name = charaname;
     newchara.pics = [];
@@ -521,7 +541,7 @@ window.fs.NewContent('newcontent', () => {
 
 
 //实现方式，首先取得光标坐标，然后生成input元素并绝对定位，聚焦至input，input左侧是1D字样，右侧响应input输入事件即时判断输入有效性，计算总和，回车键调用随机函数，取得随机数，自动聚焦输入框并插入格式化文本(顺便记录结果)。esc键或失去焦点时自动关闭input
-
+//掷骰子逻辑
 function setDiceInput() {
     //记录光标位置
     const sel = document.getSelection()
@@ -914,10 +934,10 @@ function insert10Index() {
     newR.setStart(node, offset);
     newR.setEnd(node, offset);
     for (let i = 10; i > 0; i--) {
-        newR.insertNode(document.createElement("br"));       
-        newR.insertNode(document.createTextNode(i+"."));
+        newR.insertNode(document.createElement("br"));
+        newR.insertNode(document.createTextNode(i + "."));
     }
-    newR.insertNode(document.createElement("br"));  
+    newR.insertNode(document.createElement("br"));
     // let finalText = "1.<br>2.\n3.\n4.\n5.\n6.\n7.\n8.\n9.\n10."
     sel.removeAllRanges()
     sel.addRange(newR)
@@ -928,3 +948,60 @@ function insert10Index() {
 window.fs.GetHtmlandExport("gethtmlandexport", (data) => {
     window.fs.SendHtmlandExport("sendhtmlandexport", inputDiv.innerHTML);
 })
+
+//清理WORD复制的格式
+function CleanWordHTML(str) {
+    str = str.replace(/<!--StartFragment-->/g, "");
+    str = str.replace(/<!--EndFragment-->/g, "");
+    str = str.replace(/<head>.*?<\/head>/gs, "");
+    str = str.replace(/<html.*?>/gs, "");
+    str = str.replace(/<\/html>/gs, "");
+    str = str.replace(/<body.*?>/gs, "");
+    str = str.replace(/<\/body>/gs, "");
+    str = str.replace(/<o:p>\s*<\/o:p>/g, "");
+    str = str.replace(/<o:p>.*?<\/o:p>/g, "&nbsp;");
+    str = str.replace(/\s*mso-[^:]+:[^;"]+;?/gi, "");
+    str = str.replace(/\s*MARGIN: 0cm 0cm 0pt\s*;/gi, "");
+    str = str.replace(/\s*MARGIN: 0cm 0cm 0pt\s*"/gi, "\"");
+    str = str.replace(/\s*TEXT-INDENT: 0cm\s*;/gi, "");
+    str = str.replace(/\s*TEXT-INDENT: 0cm\s*"/gi, "\"");
+    str = str.replace(/\s*TEXT-ALIGN: [^\s;]+;?"/gi, "\"");
+    str = str.replace(/\s*PAGE-BREAK-BEFORE: [^\s;]+;?"/gi, "\"");
+    str = str.replace(/\s*FONT-VARIANT: [^\s;]+;?"/gi, "\"");
+    str = str.replace(/\s*tab-stops:[^;"]*;?/gi, "");
+    str = str.replace(/\s*tab-stops:[^"]*/gi, "");
+    str = str.replace(/\s*face="[^"]*"/gi, "");
+    str = str.replace(/\s*face=[^ >]*/gi, "");
+    str = str.replace(/\s*FONT-FAMILY:[^;"]*;?/gi, "");
+    str = str.replace(/<(\w[^>]*) class=([^ |>]*)([^>]*)/gi, "<$1$3");
+    str = str.replace(/<(\w[^>]*) style="([^\"]*)"([^>]*)/gi, "<$1$3");
+    str = str.replace(/\s*style="\s*"/gi, '');
+    str = str.replace(/<SPAN\s*[^>]*>\s*&nbsp;\s*<\/SPAN>/gi, '&nbsp;');
+    str = str.replace(/<SPAN\s*[^>]*><\/SPAN>/gi, '');
+    str = str.replace(/<(\w[^>]*) lang=([^ |>]*)([^>]*)/gi, "<$1$3");
+    str = str.replace(/<SPAN\s*>(.*?)<\/SPAN>/gi, '$1');
+    str = str.replace(/<FONT\s*>(.*?)<\/FONT>/gi, '$1');
+    str = str.replace(/<\\?\?xml[^>]*>/gi, "");
+    str = str.replace(/<\/?\w+:[^>]*>/gi, "");
+    str = str.replace(/<H\d>\s*<\/H\d>/gi, '');
+    str = str.replace(/<H1([^>]*)>/gi, '');
+    str = str.replace(/<H2([^>]*)>/gi, '');
+    str = str.replace(/<H3([^>]*)>/gi, '');
+    str = str.replace(/<H4([^>]*)>/gi, '');
+    str = str.replace(/<H5([^>]*)>/gi, '');
+    str = str.replace(/<H6([^>]*)>/gi, '');
+    str = str.replace(/<\/H\d>/gi, '<br>'); //remove this to take out breaks where Heading tags were
+    str = str.replace(/<(U|I|STRIKE)>&nbsp;<\/\1>/g, '&nbsp;');
+    str = str.replace(/<(B|b)>&nbsp;<\/\b|B>/g, '');
+    str = str.replace(/<([^\s>]+)[^>]*>\s*<\/\1>/g, '');
+    str = str.replace(/<([^\s>]+)[^>]*>\s*<\/\1>/g, '');
+    str = str.replace(/<([^\s>]+)[^>]*>\s*<\/\1>/g, '');
+    //some RegEx code for the picky browsers
+    var re = new RegExp("(<P)([^>]*>.*?)(<\/P>)", "gi");
+    str = str.replace(re, "<div$2</div>");
+    var re2 = new RegExp("(<font|<FONT)([^*>]*>.*?)(<\/FONT>|<\/font>)", "gi");
+    str = str.replace(re2, "<div$2</div>");
+    str = str.replace(/size|SIZE = ([\d]{1})/g, '');
+
+    return str;
+}
