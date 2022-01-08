@@ -317,6 +317,8 @@ window.fs.GetJson("getjson", (data) => {
             if (this.checked) {
                 //加入checkedname
                 checkedname.push(this.value);
+                console.log("checkedname 为 ");
+                console.log(checkedname);
                 //取得name对应数据
                 let chara = picData.data.find((item) => { return item.name == this.value });
                 console.log("chara name为" + this.value + ' 查找结果为' + chara)
@@ -371,10 +373,7 @@ window.fs.GetJson("getjson", (data) => {
             //检查是否已经存在
             if (checkedname.indexOf(e.target.value) != -1) {
                 return;
-            } else if (sortedChara.find(name => { return name == e.target.value }) == e.target.value) {
-                return;
             }
-            checkedname.push(e.target.value);
             addChara(e.target.value);
         }
     });
@@ -462,7 +461,6 @@ function addChara(charaname) {
     let existChara = document.getElementById(charaname + 'checkbox')
     if (existChara) {
         if (!existChara.checked) {
-            console.log(existChara);
             existChara.checked = true;
             existChara.dispatchEvent(new Event('change'));
         }
