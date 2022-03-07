@@ -1,5 +1,4 @@
 let searchInput
-//加载时取得元素，注册各类事件
 window.onload = () => {
     searchInput = document.getElementById('search')
     searchInput.addEventListener("keydown", (e) => {

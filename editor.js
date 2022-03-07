@@ -431,11 +431,15 @@ window.clipboard.GetClip("getclip", (charaname, clipContent) => {
     //从剪贴板拿取数据，取出所有图片url，全部加入。（先尝试纯文本，然后尝试html）
     let regexp = /http((?!(http|png|jpg|jpeg)).)*(png|jpg|jpeg)/gi;
     console.log("取得剪贴板" + clipContent);
+    //去重列表
+    let urlList = new Array;
     if (regexp.test(clipContent[0])) {
         let chara = picData.data.find((item) => { return item.name == charaname });
         let urls = clipContent[0].match(regexp);
         urls.forEach(url => {
-            chara.pics.push(url);
+            if (chara.pics.indexOf(url) == -1) {
+                chara.pics.push(url);
+            }
         });
         window.fs.SaveJson("savejson", ["picData.json", JSON.stringify(picData)]);
         loadPics();
@@ -443,7 +447,11 @@ window.clipboard.GetClip("getclip", (charaname, clipContent) => {
         let chara = picData.data.find((item) => { return item.name == charaname });
         let urls = clipContent[1].match(regexp);
         urls.forEach(url => {
-            chara.pics.push(url);
+            urls.forEach(url => {
+                if (chara.pics.indexOf(url) == -1) {
+                    chara.pics.push(url);
+                }
+            });
         });
         window.fs.SaveJson("savejson", ["picData.json", JSON.stringify(picData)]);
         loadPics();

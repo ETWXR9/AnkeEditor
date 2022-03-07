@@ -71,7 +71,7 @@ app.whenReady().then(() => {
       })
 })
 
-app.on('window-adll-closed', () => {
+app.on('window-all-closed', () => {
     app.quit();
 })
 
