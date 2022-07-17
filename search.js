@@ -1,3 +1,5 @@
+const { ipcRenderer,remote } = require("electron");
+
 let searchInput
 window.onload = () => {
     searchInput = document.getElementById('search')
@@ -5,7 +7,7 @@ window.onload = () => {
         if (e.keyCode === 13) {
             e.preventDefault();
             let text = e.srcElement.value;
-            window.fs.SearchInPageSend("searchinpagesend", text);
+            ipcRenderer.send("search", text);
         }
         if (e.keyCode === 27) {
             e.preventDefault();
