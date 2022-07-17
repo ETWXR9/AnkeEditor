@@ -148,7 +148,7 @@ html {
     width: 0;
     border-left: 2px solid black;
     padding: 3px;
-    padding-bottom: 30vh;
+    padding-bottom: 1vh;
 }
 
 #group-div {
@@ -160,7 +160,7 @@ html {
     align-content: flex-start;
     overflow: auto;
     overflow-x: hidden;
-    flex-grow: 1;
+    flex:  1
 }
 
 #pic-check-form {
@@ -168,7 +168,7 @@ html {
     flex-direction: column;
     overflow: auto;
     overflow-x: hidden;
-    flex-grow: 2;
+    flex:  2;
 }
 
 .group-btn {

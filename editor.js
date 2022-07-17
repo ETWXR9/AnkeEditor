@@ -424,6 +424,7 @@ function loadChara(groupName, charaName) {
                 // breakLine();
                 insertImg(e.target.src)
                 if (config.addname == true) {
+                    breakLine();
                     document.execCommand('insertText', false, charaName + "：");
                 }
             }
@@ -1247,10 +1248,12 @@ function breakLine() {
         range.insertNode(br);
         range.collapse(false);
         range.insertNode(textNode);
-        range.selectNodeContents(textNode);
-        sel.removeAllRanges();
-        sel.addRange(range);
-        document.execCommand('delete');
+        range.collapse(false);
+        // range.selectNodeContents(textNode);
+        // sel.removeAllRanges();
+        // sel.addRange(range);
+        // document.execCommand('delete');
+        // HandleSelectionChange();
     }
 }
 
