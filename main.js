@@ -1,10 +1,11 @@
 const electron = require('electron')
-const { ipcMain, app, BrowserWindow, clipboard, Menu, MenuItem, remote, ipcRenderer, webContents, dialog, shell } = require('electron')
+const { ipcMain, app, BrowserWindow, clipboard, Menu, MenuItem, ipcRenderer, webContents, dialog, shell } = require('electron')
 const path = require("path");
 const fs = require("fs");
 const RandomOrg = require('random-org');
 const { request } = require("@octokit/request");
 const iconv = require('iconv-lite');
+const remote=require('@electron/remote/main');
 
 const menutemp = [
     {
@@ -105,7 +106,8 @@ app.whenReady().then(() => {
             // preload: path.join(__dirname, './perload.js') // use a preload script
         }
     });
-
+    remote.initialize();
+    remote.enable(win.webContents);
     win.loadFile('index.html');
 
     Menu.setApplicationMenu(null)

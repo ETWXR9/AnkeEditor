@@ -1,5 +1,6 @@
-const { ipcRenderer, remote, clipboard } = require('electron');
-const { Menu, MenuItem } = remote;
+const { ipcRenderer, clipboard } = require('electron');
+const remote = require('@electron/remote');
+const { Menu, MenuItem } = require('@electron/remote');
 const electron = require('electron');
 const fs = require("fs");
 const { request } = require("@octokit/request");
@@ -90,6 +91,7 @@ let minFontSize = 10;
 
 //加载时取得元素，注册各类事件
 window.onload = () => {
+
     rootDir = remote.app.isPackaged ? remote.process.env.PORTABLE_EXECUTABLE_DIR + "/" : "";
 
     maindiv = document.getElementById('main-div')
@@ -220,7 +222,7 @@ ipcRenderer.on("onquit", (event) => {
                 // contentUnsaved = false;
                 remote.app.exit();
             }
-        } else {  remote.app.exit(); }
+        } else { remote.app.exit(); }
     } catch (error) {
         remote.app.exit();
     }
@@ -778,6 +780,7 @@ function SaveContent() {
     content = JSON.stringify(contentJson)
     if (filePath != "") {
         fs.writeFileSync(filePath, content, "utf-8");
+        contentUnsaved = false;
     } else {
         const options = {
             title: "保存",
@@ -812,9 +815,7 @@ ipcRenderer.on("loadcontent", (event) => {
         let result = remote.dialog.showMessageBoxSync(win, optionsSave);
         if (result == 0) {
             SaveContent();
-        } else if (
-            result == 2
-        ) {
+        } else if (result == 2) {
             return
         }
     }

@@ -1,6 +1,6 @@
 {
   "name": "ankeeditor",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "",
   "main": "main.js",
   "license": "ISC",
@@ -11,8 +11,8 @@
   },
   "author": "etwxr9",
   "devDependencies": {
-    "electron": "^10.4.7",
-    "electron-builder": "^22.8.0",
+    "electron": "^19.0.8",
+    "electron-builder": "^23.1.0",
     "electron-packager": "^15.1.0"
   },
   "build": {
@@ -33,6 +33,7 @@
     }
   },
   "dependencies": {
+    "@electron/remote": "^2.0.8",
     "@octokit/request": "^5.4.12",
     "dom-to-image": "^2.6.0",
     "iconv-lite": "^0.6.3",

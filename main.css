@@ -11,6 +11,8 @@ html {
     margin: 0;
     /* caret-color : auto; */
     height: 100%;
+    overflow: hidden;
+    width: 100%;
 }
 
 #main-div {
@@ -21,7 +23,7 @@ html {
     height: 98vh;
     width: 100vw;
     background-color: var(--maincolor);
-    overflow: hidden;
+    /* overflow: hidden; */
 }
 
 
@@ -134,7 +136,7 @@ html {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    overflow: scroll;
+    /* overflow: scroll; */
     overflow-x: hidden;
     flex-grow: 3;
     overflow: auto;
