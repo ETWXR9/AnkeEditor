@@ -194,15 +194,16 @@ window.onload = () => {
 //退出逻辑，保存人物JSON，保存内容
 ipcRenderer.on("onquit", (event) => {
     console.log("保存退出 filepath = " + filePath);
-    //更新到本地文件
+
     try {
-        for (var groupName in unsavedChara) {
-            var charaNameArray = unsavedChara[groupName]
-            charaNameArray.forEach(charaName => {
-                // alert(charaName);
-                updateCharaJSON(groupName, charaName);
-            })
-        }
+        //更新到本地文件
+        // for (var groupName in unsavedChara) {
+        //     var charaNameArray = unsavedChara[groupName]
+        //     charaNameArray.forEach(charaName => {
+        //         // alert(charaName);
+        //         updateCharaJSON(groupName, charaName);
+        //     })
+        // }
         if (contentUnsaved) {
             let index = remote.dialog.showMessageBoxSync({
                 title: '提示',
@@ -290,6 +291,23 @@ function loadGroup(groupName) {
     console.log("读取分类，内容为" + charaNameArray);
 
     checkedGroup = groupName;
+    //生成新建人物input
+    let newcharadiv = document.createElement('input');
+    newcharadiv.className = 'new-chara-div';
+    newcharadiv.placeholder = '输入新人物名称+回车';
+    newcharadiv.addEventListener('keydown', (e) => {
+        var newCharaName = e.target.value;
+        if (e.keyCode === 13 && newCharaName != '') {
+            e.preventDefault();
+            //检查是否已经存在
+            if (checkedChara.indexOf(newCharaName) != -1) {
+                return;
+            }
+            addChara(groupName, newCharaName);
+        }
+    });
+    checkform.appendChild(newcharadiv);
+    //生成人物按钮
     charaNameArray.forEach(charaName => {
         //创建checkbox
         let charaBtn = document.createElement('div');
@@ -322,22 +340,7 @@ function loadGroup(groupName) {
         });
 
     });
-    //生成新建人物input
-    let newcharadiv = document.createElement('input');
-    newcharadiv.className = 'new-chara-div';
-    newcharadiv.placeholder = '输入新人物名称+回车';
-    newcharadiv.addEventListener('keydown', (e) => {
-        var newCharaName = e.target.value;
-        if (e.keyCode === 13 && newCharaName != '') {
-            e.preventDefault();
-            //检查是否已经存在
-            if (checkedChara.indexOf(newCharaName) != -1) {
-                return;
-            }
-            addChara(groupName, newCharaName);
-        }
-    });
-    checkform.appendChild(newcharadiv);
+
 }
 //读取人物图片
 function loadChara(groupName, charaName) {
@@ -406,7 +409,7 @@ function loadChara(groupName, charaName) {
             [...pictureList.children].forEach(img => {
                 charaJson.pics.push(img.src);
             })
-            setCharaCache(groupName, charaName, charaJson);
+            setCharaJSON(groupName, charaName, charaJson);
         },
         animation: 150
     });
@@ -428,6 +431,7 @@ function loadChara(groupName, charaName) {
                 if (config.addname == true) {
                     breakLine();
                     document.execCommand('insertText', false, charaName + "：");
+                    HandleSelectionChange();
                 }
             }
         })
@@ -493,7 +497,9 @@ function reloadChara(groupName, charaName) {
                 // breakLine();
                 insertImg(e.target.src)
                 if (config.addname == true) {
+                    breakLine();
                     document.execCommand('insertText', false, charaName + "：");
+                    HandleSelectionChange();
                 }
             }
         })
@@ -574,7 +580,8 @@ function addPicFromClip(groupName, charaName) {
     }
     //更新JSON，重载内容
     if (chara) {
-        setCharaCache(groupName, charaName, chara);
+        setCharaJSON(groupName, charaName, chara);
+
     }
 
 }
@@ -589,17 +596,18 @@ function getCharaCache(groupName, charaName) {
     return cachedCharaData[groupName + "&&" + charaName];
 }
 //更改缓存中的人物JSON并重载指定人物，添加到unsavedChara
-function setCharaCache(groupName, charaName, data) {
+function setCharaJSON(groupName, charaName, data) {
     console.log("修改JSON" + groupName + " : " + charaName);
-    cachedCharaData[groupName + "&&" + charaName] = data;
+    fs.writeFileSync(rootDir + "图库/" + groupName + "/" + charaName + ".json", JSON.stringify(data), "utf-8");
+    // cachedCharaData[groupName + "&&" + charaName] = data;
     reloadChara(groupName, charaName)
-    if (!unsavedChara[groupName]) {
-        unsavedChara[groupName] = [];
-    }
-    if (!unsavedChara[groupName].includes(charaName)) {
-        console.log("添加未保存人物" + charaName);
-        unsavedChara[groupName].push(charaName);
-    }
+    // if (!unsavedChara[groupName]) {
+    //     unsavedChara[groupName] = [];
+    // }
+    // if (!unsavedChara[groupName].includes(charaName)) {
+    //     console.log("添加未保存人物" + charaName);
+    //     unsavedChara[groupName].push(charaName);
+    // }
 
 }
 //把缓存中的人物JSON更新到本地
@@ -642,7 +650,7 @@ function CreatePicMenu(groupName, charaName, picUrl) {
             data.pics.remove(picUrl);
             console.log("删除图片后" + data);
             if (data) {
-                setCharaCache(groupName, charaName, data);
+                setCharaJSON(groupName, charaName, data);
             }
         }
     }));
@@ -661,7 +669,7 @@ function loadConfigs() {
     configJson = fs.readFileSync(rootDir + "config.json", "utf-8");
 
 
-    let config = JSON.parse(configJson);
+    config = JSON.parse(configJson);
     console.log("读取config文件结果" + configJson);
     // win.webContents.send("winlog", "读取config文件结果" + configJson);
 
@@ -679,9 +687,11 @@ function loadConfigs() {
     picSizeSlider.value = config.picsizeslider;
     onPicSizeSliderChange();
     //设置是否隐藏历史
-    onHideHistoryButtonClick(true);
+    // onHideHistoryButtonClick(true);
+    historyDiv.setAttribute("style", `flex-grow:${config.hideHistoryDiv ? 0 : 1.5};`);
     //设置是否带人名
-    onAddNameButtonClick(true);
+    // onAddNameButtonClick(true);
+    document.getElementById('add-name-button').innerText = config.addname ? "现在插图带人名" : "现在插图不带人名";
 
     CheckVersion();
 
@@ -743,6 +753,7 @@ function loadConfigs() {
 
 //保存json
 function SaveJson(args) {
+    console.log("SaveJson " + args[1]);
     fs.writeFileSync(rootDir + args[0], args[1], "utf-8");
 }
 
@@ -1091,22 +1102,16 @@ function getCaretTopPoint() {
 
 //#region 各项设置
 //点击按钮后将#history-div的flex-grow设为0，如果已经为0则设置为1.5;
-function onHideHistoryButtonClick(update) {
-    console.log("点击历史button " + update)
-    if (update != true) {
-        config.hideHistoryDiv = !config.hideHistoryDiv;
-    }
+function onHideHistoryButtonClick() {
+    // console.log("点击历史button hide:"+config.hideHistoryDiv)
+    config.hideHistoryDiv = !config.hideHistoryDiv;
     historyDiv.setAttribute("style", `flex-grow:${config.hideHistoryDiv ? 0 : 1.5};`);
     SaveJson(["config.json", JSON.stringify(config)]);
 }
 //点击按钮后切换addName变量，改变按钮名字
-function onAddNameButtonClick(update) {
-    if (update != true) {
-        config.addname = !config.addname;
-    }
-    if (config.addname) {
-        document.getElementById('add-name-button').innerText = "现在插图带人名";
-    } else { document.getElementById('add-name-button').innerText = "现在插图不带人名"; }
+function onAddNameButtonClick() {
+    config.addname = !config.addname;
+    document.getElementById('add-name-button').innerText = config.addname ? "现在插图带人名" : "现在插图不带人名";
     SaveJson(["config.json", JSON.stringify(config)]);
 }
 function onFontSizeSliderChange() {
@@ -1249,11 +1254,8 @@ function breakLine() {
         range.insertNode(br);
         range.collapse(false);
         range.insertNode(textNode);
-        range.collapse(false);
-        // range.selectNodeContents(textNode);
-        // sel.removeAllRanges();
-        // sel.addRange(range);
-        // document.execCommand('delete');
+        range.selectNodeContents(textNode);
+        document.execCommand('delete');
         // HandleSelectionChange();
     }
 }
