@@ -1,6 +1,6 @@
 {
   "name": "ankeeditor",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "",
   "main": "main.js",
   "license": "ISC",
@@ -18,7 +18,7 @@
   "build": {
     "appId": "et.electron.editor",
     "productName": "安科编辑器",
-    "copyright": "Copyright © 2021 etwxr9",
+    "copyright": "Copyright © 2022 etwxr9",
     "directories": {
       "output": "bulid"
     },

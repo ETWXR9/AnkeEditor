@@ -25,9 +25,14 @@ var savedRange = null;
 
 
 function HandleSelectionChange() {
+    if (document.activeElement != inputDiv) {
+        return;
+    }
     var sel = window.getSelection && window.getSelection();
+    // console.log("handle sel " + sel);
     if (sel && sel.rangeCount > 0) {
         savedRange = sel.getRangeAt(0);
+        // console.log("saveRange " + savedRange);
     }
 }
 //window
@@ -176,11 +181,16 @@ window.onload = () => {
     });
     //保存sel
     inputDiv.addEventListener("selectstart", () => {
-        console.log("Selection started in targetDiv");
+        // console.log("Selection started in targetDiv");
         document.addEventListener("selectionchange", HandleSelectionChange, false);
     });
-    inputDiv.addEventListener("focusout", () => {
-        document.removeEventListener("selectionchange", HandleSelectionChange);
+    // inputDiv.addEventListener("focusout", () => {
+    //     console.log("focusout targetDiv");
+    //     document.removeEventListener("selectionchange", HandleSelectionChange);
+    // })
+    inputDiv.addEventListener("input", () => {
+        // console.log("input in targetDiv");
+        document.addEventListener("selectionchange", HandleSelectionChange);
     })
 
     //各类鼠标事件
@@ -1058,10 +1068,10 @@ function setDiceInput() {
 
 }
 /**
-    * Get the caret position in all cases
-    *
-    * @returns {object} left, top distance in pixels
-    */
+* Get the caret position in all cases
+*
+* @returns {object} left, top distance in pixels
+*/
 function getCaretTopPoint() {
     const sel = document.getSelection()
     const r = sel.getRangeAt(0)
