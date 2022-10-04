@@ -1,3 +1,5 @@
+//此版本为离线版本，将图库完全重写为读取本地目录下的图片文件
+
 const { ipcRenderer, clipboard } = require('electron');
 const remote = require('@electron/remote');
 const { Menu, MenuItem } = require('@electron/remote');
@@ -7,12 +9,6 @@ const { request } = require("@octokit/request");
 const Sortable = require('sortablejs');
 const domtoimage = require('dom-to-image');
 const iconv = require('iconv-lite');
-// Default SortableJS
-// import Sortable from 'sortablejs';
-
-ipcRenderer.on("ontest", function (msg) {
-    console.log(msg);
-});
 
 Array.prototype.remove = function (item) {
     var index = this.indexOf(item);
@@ -20,10 +16,13 @@ Array.prototype.remove = function (item) {
         this.splice(index, 1);
     }
 };
-var savedRange = null;
 
 
 
+
+/**
+ *记忆插入点位置
+ */
 function HandleSelectionChange() {
     if (document.activeElement != inputDiv) {
         return;
@@ -35,6 +34,8 @@ function HandleSelectionChange() {
         // console.log("saveRange " + savedRange);
     }
 }
+var savedRange = null;
+
 //window
 let win = null;
 
@@ -57,8 +58,8 @@ let groupDiv = null
 //piccheckform
 let checkedChara = [];
 let checkform = null;
-//缓存人物图库JSON，'groupName&&charaName : JSONdata'
-let cachedCharaData = {}
+
+
 //'groupName:[charaName]'
 let unsavedChara = {}
 //font-color-input
@@ -94,7 +95,7 @@ let minFontSize = 10;
 
 
 
-//加载时取得元素，注册各类事件
+//初始化逻辑，取得元素，注册各类事件
 window.onload = () => {
 
     rootDir = remote.app.isPackaged ? remote.process.env.PORTABLE_EXECUTABLE_DIR + "/" : "";
@@ -141,6 +142,7 @@ window.onload = () => {
         var text = '', event = (e.originalEvent || e);
         text = event.clipboardData.getData('text/html') ? event.clipboardData.getData('text/html') : event.clipboardData.getData('Text');
         console.log("复制数据：" + text);
+
         text = CleanWordHTML(text);
 
         //简化br标签
@@ -240,6 +242,7 @@ ipcRenderer.on("onquit", (event) => {
 
 })
 
+
 //#region 图库
 function loadGroupNames() {
     groupDiv.innerHTML = "";
@@ -263,14 +266,16 @@ function loadGroupNames() {
         } else {
             groupButton.style.setProperty('background', 'white')
         }
+        //组按钮点击
         groupButton.addEventListener('click', e => {
+            //重置颜色
             [...groupDiv.children].forEach(
                 child => {
                     child.style.setProperty('background', 'white')
                 })
             e.target.style.setProperty('background', 'coral')
             checkedGroup = groupName;
-            //加载人物json
+            //加载人物目录
             loadGroup(e.target.innerText);
         })
     })
@@ -287,36 +292,21 @@ function reloadGroupName() {
     menu.popup();
 }
 
+/**
+ *  加载指定组目录下的人物目录
+ *  
+ * @param {string} 组名称
+ */
 function loadGroup(groupName) {
     checkform.innerHTML = "";
     let charaNameArray;
     try {
-        charaNameArray = fs.readdirSync(rootDir + "图库/" + groupName + "/").filter(function (file) {
-            return !fs.statSync(rootDir + "图库/" + groupName + "/" + file).isDirectory() && file.endsWith(".json");
-        }).map((name) => { return name.replace(".json", "") });
+        charaNameArray = getDirectories(rootDir + "图库/" + groupName);
     } catch (error) {
         loadGroupNames();
     }
-
     console.log("读取分类，内容为" + charaNameArray);
-
     checkedGroup = groupName;
-    //生成新建人物input
-    let newcharadiv = document.createElement('input');
-    newcharadiv.className = 'new-chara-div';
-    newcharadiv.placeholder = '输入新人物名称+回车';
-    newcharadiv.addEventListener('keydown', (e) => {
-        var newCharaName = e.target.value;
-        if (e.keyCode === 13 && newCharaName != '') {
-            e.preventDefault();
-            //检查是否已经存在
-            if (checkedChara.indexOf(newCharaName) != -1) {
-                return;
-            }
-            addChara(groupName, newCharaName);
-        }
-    });
-    checkform.appendChild(newcharadiv);
     //生成人物按钮
     charaNameArray.forEach(charaName => {
         //创建checkbox
@@ -353,20 +343,48 @@ function loadGroup(groupName) {
 
 }
 //读取人物图片
+/**
+ * 从人物目录中读取所有图片
+ *
+ * @param {*} groupName
+ * @param {*} charaName
+ * @return {*} 
+ */
 function loadChara(groupName, charaName) {
-    //读取JSON
-    let charaJson;
-    charaJson = cachedCharaData[groupName + "&&" + charaName]
-    if (!charaJson) {
-        try {
-            charaJson = fs.readFileSync(rootDir + "图库/" + groupName + "/" + charaName + ".json", "utf-8");
-            charaJson = JSON.parse(charaJson);
-        } catch (error) {
-            alert("人物：" + charaName + " 读取失败！");
-            return;
+    //读取目录
+    let picFileNames = getPictureFiles(groupName, charaName);
+    //读取排序文件
+    let picSortJson = {};
+    picSortJson.sort = picFileNames;
+    try {
+        picSortJson = fs.readFileSync(rootDir + "图库/" + groupName + "/" + charaName + "/" + "sort.json", "utf-8");
+        picSortJson = JSON.parse(picSortJson);
+        console.log("读取排序文件结果" + picSortJson);
+        //给排序文件添加缺少的新图片
+        for (let i = 0; i < picFileNames.length; i++) {
+            const v = picFileNames[i];
+            if (picSortJson.indexOf(v) == -1) {
+                picSortJson.sort.push(v);
+            }
         }
-        //加载进缓存
-        cachedCharaData[groupName + "&&" + charaName] = charaJson;
+        //给排序文件去除不存在的图片
+        for (let i = 0; i < picSortJson.length; i++) {
+            const v = picSortJson[i];
+            if (picFileNames.indexOf(v) == -1) {
+                picSortJson.sort.remove(v);
+            }
+        }
+    } catch (error) {
+        //没图片，初始化为当前图片列表
+    }
+    SaveSortJson(groupName, charaName, picSortJson);
+    let picFileUrls = new Array();
+    picSortJson.sort.forEach((v, i) => { picFileUrls[i] = rootDir + "图库/" + groupName + "/" + charaName + "/" + v })
+
+    //建立JSON
+    let charaJson;
+    charaJson = {
+        "pics": picFileUrls
     }
     //记录选中状态
     if (checkedChara.includes(groupName + "&&" + charaName)) {
@@ -398,28 +416,22 @@ function loadChara(groupName, charaName) {
         if (e.button == 0) {
             unloadChara(groupName, charaName);
         }
-
     })
-    nametitle.addEventListener('mouseup', e => {
-        //右击人物名称栏，弹出删除人物按钮
-        if (e.button == 2) {
-            CreateCharaMenu(groupName, charaName);
-        }
-    })
-
     //创建可排序图片列表
     let pictureList = document.createElement("div");
     charaDiv.appendChild(pictureList);
     //排序设置+排序回调更新JSON
+    //由于离线版更新，排序回调预计使用单独的排序json文件来实现
     var sortable = Sortable.create(pictureList, {
         // Called by any change to the list (add / update / remove)
         onSort: function (/**Event*/evt) {
             // same properties as onEnd
-            charaJson.pics = [];
+            picSortJson.sort = [];
             [...pictureList.children].forEach(img => {
-                charaJson.pics.push(img.src);
+                let a = img.src.split("/");
+                picSortJson.sort.push(a[a.length - 1]);
             })
-            setCharaJSON(groupName, charaName, charaJson);
+            SaveSortJson(groupName, charaName, picSortJson);
         },
         animation: 150
     });
@@ -445,20 +457,7 @@ function loadChara(groupName, charaName) {
                 }
             }
         })
-        imgelement.addEventListener('mouseup', e => {
-            //右键菜单，里面是删除
-            if (e.button == 2) {
-                console.log("打开图片删除菜单")
-                CreatePicMenu(groupName, charaName, e.target.src);
-            }
-        })
     });
-    //创建新增按钮
-    let addbutton = document.createElement("button");
-    charaDiv.appendChild(addbutton);
-    addbutton.className = 'add-pic-button';
-    // let index_chara = picData.data.indexOf(chara);
-    addbutton.onclick = () => { addPicFromClip(groupName, charaName); };
 
 }
 //卸载人物图片
@@ -478,200 +477,35 @@ function unloadChara(groupName, charaName) {
         loadGroup(groupName);
     }
 }
-function reloadChara(groupName, charaName) {
-    //记录选中状态
-    if (!checkedChara.includes(groupName + "&&" + charaName)) {
-        alert("试图重载了未加载的人物 " + groupName + " : " + charaName);
-        return;
-    }
-    var pictureList = document.getElementById(groupName + "&&" + charaName).children[1];
-    if (!pictureList) {
-        alert("重载时未找到人物 " + groupName + " : " + charaName + " 的图片栏");
-        return;
-    }
-    pictureList.innerHTML = "";
-    var charaJson = getCharaCache(groupName, charaName);
-    charaJson.pics.forEach(url => {
-        let imgelement = document.createElement("img");
-        imgelement.className = 'pic-button';
-        imgelement.src = url;
-        pictureList.appendChild(imgelement);
-        //图片信息
-        imgelement.setAttribute("index", charaJson.pics.indexOf(url));
-        //插图逻辑和删除图片
-        imgelement.addEventListener("click", e => {
-            //检查输入框是否焦点，防止插入图片到顶部。
-            if (e.button == 0) {
-                console.log("准备插入图片")
-                // inputDiv.focus();
-                // breakLine();
-                insertImg(e.target.src)
-                if (config.addname == true) {
-                    breakLine();
-                    document.execCommand('insertText', false, charaName + "：");
-                    HandleSelectionChange();
-                }
-            }
-        })
-        imgelement.addEventListener('mouseup', e => {
-            //右键菜单，里面是删除
-            if (e.button == 2) {
-                console.log("打开图片删除菜单")
-                CreatePicMenu(groupName, charaName, e.target.src);
-            }
-        })
-    });
-}
 
-//添加新人物 将其name加入checkedname
-function addChara(groupName, charaName) {
-    //去重
-    if (checkedChara.includes(groupName + "&&" + charaName)) {
-        alert("该人物已经存在并加载！")
-        return
-    }
-    var filePath = rootDir + "图库/" + groupName + "/" + charaName + ".json"
-    var newCharaFile;
+//#endregion
 
-    if (!fs.existsSync(filePath)) {
-        let newCharaJSON = '{"pics":[]}';
-        newCharaFile = fs.writeFileSync(filePath, newCharaJSON, "utf-8")
-    } else {
-        newCharaFile = fs.readFileSync(filePath, "utf-8");
-    }
-
-    loadChara(groupName, charaName);
-}
-//删除人物
-function deleteChara(groupName, charaName) {
-    cachedCharaData[groupName + "&&" + charaName] = null;
-    fs.unlinkSync(rootDir + "图库/" + groupName + "/" + charaName + ".json", (err) => {
-        if (err) throw err;
-        console.log('删除人物 ' + groupName + " : " + charaName);
-    });
-    unloadChara(groupName, charaName);
-}
-
-//读取剪贴板插入图片
-function addPicFromClip(groupName, charaName) {
-    //从剪贴板拿取数据，取出所有图片url，全部加入。
-    let clipcontentPlain = clipboard.readText();
-    let clipcontentHTML = clipboard.readHTML();
-    console.log("取得剪贴板Plain" + clipcontentPlain);
-    console.log("取得剪贴板HTML" + clipcontentHTML);
-    //正则匹配url
-    let regexp = /http((?!(http|png|jpg|jpeg)).)*(png|jpg|jpeg)/gi;
-
-    let chara;
-    //先尝试匹配Html
-    if (regexp.test(clipcontentHTML)) {
-        // console.log("测试添加图片，picData.data = " + picData.data);
-        // let chara = picData.data.find((item) => { return item.name == charaName });
-        chara = getCharaCache(groupName, charaName);
-        console.log("测试添加图片 人物 " + chara);
-        let urls = clipcontentHTML.match(regexp);
-        urls.forEach(url => {
-            if (chara.pics.indexOf(url) == -1) {
-                chara.pics.push(url);
-            }
-        });
-    }
-    //再尝试匹配纯文本
-    if (regexp.test(clipcontentPlain)) {
-        chara = getCharaCache(groupName, charaName);
-        let urls = clipcontentPlain.match(regexp);
-        urls.forEach(url => {
-            urls.forEach(url => {
-                if (chara.pics.indexOf(url) == -1) {
-                    chara.pics.push(url);
-                }
-            });
-        });
-    }
-    //更新JSON，重载内容
-    if (chara) {
-        setCharaJSON(groupName, charaName, chara);
-
-    }
-
-}
-//根据软件环境取得根目录
+//#region 读写
+/**
+ * 取得目录下所有文件夹
+ *  
+ * @param {*} 目录（结尾不含/）
+ * @return {string[]} 目录下所有文件夹名
+ */
 function getDirectories(path) {
     return fs.readdirSync(path).filter(function (file) {
         return fs.statSync(path + '/' + file).isDirectory();
     });
 }
-//取得缓存中的人物JSON
-function getCharaCache(groupName, charaName) {
-    return cachedCharaData[groupName + "&&" + charaName];
+/**
+ * 取得人物目录下所有图片url
+ *  
+ * @param groupName{*} 组名称
+ * @param charaName{*} 人物名称
+ * @return {string[]} 目录下所有图片文件名
+ */
+function getPictureFiles(groupName, charaName) {
+    return fs.readdirSync(rootDir + "图库/" + groupName + "/" + charaName).filter(function (file) {
+        return (!fs.statSync(rootDir + "图库/" + groupName + "/" + charaName + '/' + file).isDirectory()
+            && /(.jpg|.png|.jpeg|.gif|.bmp)$/.test(file)
+        );
+    });
 }
-//更改缓存中的人物JSON并重载指定人物，添加到unsavedChara
-function setCharaJSON(groupName, charaName, data) {
-    console.log("修改JSON" + groupName + " : " + charaName);
-    fs.writeFileSync(rootDir + "图库/" + groupName + "/" + charaName + ".json", JSON.stringify(data), "utf-8");
-    // cachedCharaData[groupName + "&&" + charaName] = data;
-    reloadChara(groupName, charaName)
-    // if (!unsavedChara[groupName]) {
-    //     unsavedChara[groupName] = [];
-    // }
-    // if (!unsavedChara[groupName].includes(charaName)) {
-    //     console.log("添加未保存人物" + charaName);
-    //     unsavedChara[groupName].push(charaName);
-    // }
-
-}
-//把缓存中的人物JSON更新到本地
-function updateCharaJSON(groupName, charaName) {
-    console.log("更新文件" + groupName + " : " + charaName);
-    if (getCharaCache(groupName, charaName)) {
-        fs.writeFileSync(rootDir + "图库/" + groupName + "/" + charaName + ".json", JSON.stringify(getCharaCache(groupName, charaName)), "utf-8");
-    }
-}
-
-//人物右键菜单：删除人物
-function CreateCharaMenu(groupName, charaname) {
-    // win.webContents.send("winlog", "creatpicmenu里的args是" + charaname);
-    const menu = new Menu();
-    menu.append(new MenuItem({
-        label: '删除人物', click() {
-            const optionsDelete = {
-                type: "question",
-                buttons: ["是", "否"],
-                title: "提示",
-                defaultId: 0,
-                message: "删除该人物及其图片，无法找回，确认？"
-            }
-            if (remote.dialog.showMessageBoxSync(win, optionsDelete) == 0) {
-                deleteChara(groupName, charaname);
-            }
-        }
-    }));
-    menu.popup();
-}
-
-//图片右键菜单：删除图片
-function CreatePicMenu(groupName, charaName, picUrl) {
-    let menu = new Menu();
-    menu.append(new MenuItem({
-        label: '删除图片', click() {
-
-            let data = getCharaCache(groupName, charaName);
-            console.log("删除图片前" + data);
-            data.pics.remove(picUrl);
-            console.log("删除图片后" + data);
-            if (data) {
-                setCharaJSON(groupName, charaName, data);
-            }
-        }
-    }));
-    menu.popup();
-}
-
-
-//#endregion
-
-//#region 重构函数
-
 //读取config
 function loadConfigs() {
     //读取config
@@ -765,6 +599,17 @@ function loadConfigs() {
 function SaveJson(args) {
     console.log("SaveJson " + args[1]);
     fs.writeFileSync(rootDir + args[0], args[1], "utf-8");
+}
+/**
+ * 保存排序文件
+ *
+ * @param {*} groupName
+ * @param {*} charaName
+ * @param {json} sortJson
+ */
+function SaveSortJson(groupName, charaName, sortJson) {
+    console.log("SaveSortJson " + groupName + " : " + charaName);
+    fs.writeFileSync(rootDir + "图库/" + groupName + "/" + charaName + "/sort.json", JSON.stringify(sortJson), "utf-8");
 }
 
 //新建
@@ -891,7 +736,6 @@ ipcRenderer.on("gethtmlandexport", (event) => {
 
 
 //#endregion
-
 
 //#region 骰子
 //实现方式，首先取得光标坐标，然后生成input元素并绝对定位，聚焦至input，input左侧是1D字样，右侧响应input输入事件即时判断输入有效性，计算总和，回车键调用随机函数，取得随机数，自动聚焦输入框并插入格式化文本(顺便记录结果)。esc键或失去焦点时自动关闭input
@@ -1478,285 +1322,3 @@ function insert10Index() {
     newR.collapse(false);
 }
 //#endregion
-
-
-//#region 被重构的废弃函数
-//接收到JSON并据此创建图片check栏
-// window.fs.GetJson("getjson", (data) => {
-//     picData = data;
-//     //先清除check栏
-//     checkform.innerHTML = "";
-//     //再清除picdiv
-//     picDiv.innerHTML = "";
-//     //去重
-//     var uniqueArray = new Array;
-//     data.data.forEach(chara => {
-//         if (uniqueArray.find(uniqueChara => { return uniqueChara.name == chara.name }) != undefined) {
-//             return;
-//         }
-//         uniqueArray.push(chara);
-//     })
-//     data.data = uniqueArray;
-
-//     //按字母排序 1.4更新不再自动排序
-//     var sortedChara = data.data;
-//     // sortedChara = sortedChara.sort(function compareFunction(item1, item2) {
-//     //     return item1.name.localeCompare(item2.name);
-//     // });
-//     //根据picdata生成check栏
-//     sortedChara.forEach(chara => {
-//         //创建新的label
-//         let newlabel = document.createElement('label');
-//         //可选：添加label信息
-//         //--
-//         newlabel.className = 'chara-label';
-//         checkform.appendChild(newlabel);
-//         //创建checkbox
-//         let checkbox = document.createElement('input');
-//         checkbox.type = 'checkbox';
-//         checkbox.value = chara.name;
-//         checkbox.className = 'pic-checkbox';
-//         checkbox.id = chara.name + 'checkbox';
-//         //勾选人物逻辑
-//         checkbox.addEventListener('change', function () {
-//             if (this.checked) {
-//                 //加入checkedname
-//                 checkedname.push(this.value);
-//                 console.log("checkedname 为 ");
-//                 console.log(checkedname);
-//                 //取得name对应数据
-//                 let chara = picData.data.find((item) => { return item.name == this.value });
-//                 console.log("chara name为" + this.value + ' 查找结果为' + chara)
-//                 //创建新的人物栏（于新增人物按钮前）
-//                 let newDiv = document.createElement("div");
-//                 newDiv.className = 'chara-div';
-//                 newDiv.id = this.value;
-
-
-//                 // newDiv添加drop事件，每个item判断为图片后，作为url数组fetch至sm，newDiv背景变红，fetch取得后挨个push入chara，保存，重载
-
-//                 newcharadiv.before(newDiv);
-//                 //创建人物标题
-//                 let nametitle = document.createElement("div");
-//                 nametitle.className = 'chara-name';
-//                 newDiv.appendChild(nametitle);
-//                 nametitle.innerText = this.value;
-//                 //人物栏信息(在人物标题上)
-//                 //创建图片
-//                 chara.pics.forEach(url => {
-//                     let imgelement = document.createElement("img");
-//                     imgelement.className = 'pic-button';
-//                     imgelement.src = url;
-//                     newDiv.appendChild(imgelement);
-//                 });
-//                 //创建新增按钮
-//                 let addbutton = document.createElement("button");
-//                 newDiv.appendChild(addbutton);
-//                 addbutton.className = 'add-pic-button';
-//                 addbutton.onclick = () => { addPicFromClip(addbutton, chara.name); };
-//             }
-//             else {
-//                 const div = document.getElementById(this.value);
-//                 div.parentNode.removeChild(div);
-//                 //从checkedname去除
-//                 checkedname.remove(this.value);
-//             }
-//         });
-//         newlabel.appendChild(checkbox);
-//         //创建span
-//         let span = document.createElement('span');
-//         span.innerText = chara.name;
-//         newlabel.appendChild(span);
-//     });
-//     //首先生成新建人物input
-//     let newcharadiv = document.createElement('input');
-//     newcharadiv.className = 'new-chara-div';
-//     newcharadiv.placeholder = '输入新人物名称+回车';
-//     newcharadiv.addEventListener('keydown', (e) => {
-//         if (e.keyCode === 13 && e.target.value != '') {
-//             e.preventDefault();
-//             //检查是否已经存在
-//             if (checkedname.indexOf(e.target.value) != -1) {
-//                 return;
-//             }
-//             addChara(e.target.value);
-//         }
-//     });
-//     picDiv.appendChild(newcharadiv);
-//     //再根据checkedname选中指定checkbox并加载至picdiv（于新增人物按钮前）
-//     checkedname.forEach(name => {
-//         //选中指定checkbox
-//         const checkbox = document.getElementById(name + 'checkbox');
-//         checkbox.checked = true;
-//         //取得name对应数据
-//         let chara = picData.data.find((item) => { return item.name == name });
-//         //创建新的人物栏（于新增人物按钮前）
-//         let newDiv = document.createElement("div");
-//         newDiv.className = 'chara-div';
-//         newDiv.id = chara.name;
-//         newcharadiv.before(newDiv);
-//         // document.querySelector('#picture-div').appendChild(newDiv);
-//         //创建人物标题
-//         let nametitle = document.createElement("div");
-//         nametitle.className = 'chara-name';
-//         newDiv.appendChild(nametitle);
-//         nametitle.innerText = chara.name;
-//         //人物栏信息(在人物标题上)
-//         nametitle.setAttribute("charaindex", data.data.indexOf(chara));
-//         //创建图片
-//         chara.pics.forEach(url => {
-//             let imgelement = document.createElement("img");
-//             imgelement.className = 'pic-button';
-//             imgelement.src = url;
-//             newDiv.appendChild(imgelement);
-//             //图片信息
-//             imgelement.setAttribute("index", chara.pics.indexOf(url));
-//             imgelement.setAttribute("charaindex", data.data.indexOf(chara));
-//         });
-//         //创建新增按钮
-//         let addbutton = document.createElement("button");
-//         newDiv.appendChild(addbutton);
-//         addbutton.className = 'add-pic-button';
-//         // let index_chara = picData.data.indexOf(chara);
-//         addbutton.onclick = () => { addPicFromClip(addbutton, chara.name); };
-//     });
-//     //加载拖动排序逻辑
-//     dragSortInit();
-// });
-// window.fs.GetConfig("getconfig", (config) => {
-//     configData = config;
-//     //读取APIKEY
-//     // console.log("config.randomapi: "+config.randomapi)
-//     // configData.randomapi = config.randomapi?config.randomapi:"";
-//     // console.log("configData.randomapi: "+configData.randomapi)
-//     //设置字体、图片
-//     fontColorInput.value = config.fontColor;
-//     backgroundColorInput.value = config.backgroundColor ?? "#f5deb3";
-//     onFontColorInputChange();
-//     onBackgroundColorInputChange();
-//     fontSizeSlider.value = config.fontsizeslider;
-//     onFontSizeSliderChange();
-//     picSizeSlider.value = config.picsizeslider;
-//     onPicSizeSliderChange();
-//     //设置是否隐藏历史
-//     onHideHistoryButtonClick(true);
-//     //设置是否带人名
-//     onAddNameButtonClick(true);
-
-//     if (config.randomapi == "") {
-//         console.log("未读取到API")
-//         useApi = false;
-//         return 0;
-//     }
-//     console.log("读取到API " + configData.randomapi)
-//     fetch("https://api.random.org/json-rpc/2/invoke", {
-//         method: "POST",
-//         headers: {
-//             'user-agent': 'Chrome',
-//             'content-type': 'application/json'
-//         },
-//         body: JSON.stringify({
-//             "jsonrpc": "2.0",
-//             "method": "getUsage",
-//             "params": {
-//                 "apiKey": configData.randomapi
-//             },
-//             "id": 15998
-//         })
-//     }).then(response => {
-//         console.log('response' + response.status)
-//         return response.json();
-//     })
-//         .then(myJson => {
-//             console.log("读取myJson " + JSON.stringify(myJson))
-//             if (myJson.result) {
-//                 if (myJson.result.status == "running") {
-//                     console.log("成功验证APIKey");
-//                     window.log.ShowAlert("showalert", ["成功验证APIKey", "好耶"]);
-//                     useApi = true;
-//                     return 0;
-//                 }
-//             }
-//             console.log("验证APIKey失败");
-//             window.log.ShowAlert("showalert", ["验证APIKey失败，将转换至普通随机", "坏耶"]);
-//             useApi = false;
-//         });
-// })
-
-//读取剪贴板，随后添加图片
-// function addPicFromClip(target, charaname) {
-//     window.clipboard.ReadClip("readclip", charaname);
-// }
-
-//接收剪贴板内容并添加图片，然后刷新图片栏
-// window.clipboard.GetClip("getclip", (charaname, clipContent) => {
-//     //从剪贴板拿取数据，取出所有图片url，全部加入。（先尝试纯文本，然后尝试html）
-//     let regexp = /http((?!(http|png|jpg|jpeg)).)*(png|jpg|jpeg)/gi;
-//     console.log("取得剪贴板" + clipContent);
-//     //去重列表
-//     let urlList = new Array;
-//     if (regexp.test(clipContent[0])) {
-//         let chara = picData.data.find((item) => { return item.name == charaname });
-//         let urls = clipContent[0].match(regexp);
-//         urls.forEach(url => {
-//             if (chara.pics.indexOf(url) == -1) {
-//                 chara.pics.push(url);
-//             }
-//         });
-//         window.fs.SaveJson("savejson", ["picData.json", JSON.stringify(picData)]);
-//         loadPics();
-//     } else if (regexp.test(clipContent[1])) {
-//         let chara = picData.data.find((item) => { return item.name == charaname });
-//         let urls = clipContent[1].match(regexp);
-//         urls.forEach(url => {
-//             urls.forEach(url => {
-//                 if (chara.pics.indexOf(url) == -1) {
-//                     chara.pics.push(url);
-//                 }
-//             });
-//         });
-//         window.fs.SaveJson("savejson", ["picData.json", JSON.stringify(picData)]);
-//         loadPics();
-//     }
-// });
-//接收右键删除菜单通信，删除图片(args为[charaname,src])
-// window.menu.DeletePic("deletepic", (args) => {
-//     deletePic(args);
-// })
-
-
-// //接收右键删除菜单通信，删除人物
-// window.menu.DeleteChara("deletechara", (charaname) => {
-//     deleteChara(charaname);
-// })
-
-//主进程向窗口输出log
-// window.log.WinLog("winlog", (data) => {
-//     console.log(data);
-// })
-
-
-// //检查版本
-// window.log.CheckVersion("checkversion", (result) => {
-//     document.getElementById("version-text").innerHTML = "<b>最新版本为" + result.data.name + " 点击下载</b>";
-//     document.getElementById("version-text").addEventListener('click', e => {
-//         e.preventDefault();
-//         window.log.OpenPage("openpage", result.data.html_url);
-//     })
-// })
-
-
-//#endregion
-
-
-//接受到分类目录名并添加新的分类按钮(测试)
-// window.fs.NewGroup("newgroup", (groupName) => {
-//     let newGroupDiv = document.createElement('div');
-//     newGroupDiv.className = "group-btn";
-//     newGroupDiv.innerText = groupName;
-//     groupDiv.appendChild(newGroupDiv);
-//     newGroupDiv.addEventListener('click', e => {
-//         e.preventDefault();
-//         //加载该目录下所有人物
-//     })
-// });
