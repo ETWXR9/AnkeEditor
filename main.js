@@ -5,7 +5,7 @@ const fs = require("fs");
 const RandomOrg = require('random-org');
 const { request } = require("@octokit/request");
 const iconv = require('iconv-lite');
-const remote=require('@electron/remote/main');
+const remote = require('@electron/remote/main');
 
 const menutemp = [
     {
@@ -61,21 +61,18 @@ const menutemp = [
         click() { win.webContents.send("gethtmlandexport") }
     },
     {
-        label: '功能',
-        submenu: [
-            {
-                label: '搜索',
-                accelerator: 'CmdOrCtrl+F',
-                click() {
-                    searchwin.show();
-                }
-            },
-            {
-                label: '生成长截图',
-                click() {
-                    win.webContents.send("toPng");
-                }
-            }]
+        label: '搜索',
+        accelerator: 'CmdOrCtrl+F',
+        click() {
+            searchwin.show();
+        }
+    },
+    {
+        label: '生成长截图',
+        click() {
+            win.webContents.send("toPng");
+        }
+
     },
     {
         label: '开发者工具',
@@ -102,7 +99,7 @@ app.whenReady().then(() => {
             worldSafeExecuteJavaScript: true,
             contextIsolation: false,
             nodeIntegration: true,
-            enableRemoteModule: true, // turn off remote
+            enableRemoteModule: true, 
             // preload: path.join(__dirname, './perload.js') // use a preload script
         }
     });

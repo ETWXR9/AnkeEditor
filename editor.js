@@ -359,24 +359,25 @@ function loadChara(groupName, charaName) {
     try {
         picSortJson = fs.readFileSync(rootDir + "图库/" + groupName + "/" + charaName + "/" + "sort.json", "utf-8");
         picSortJson = JSON.parse(picSortJson);
-        console.log("读取排序文件结果" + picSortJson);
-        //给排序文件添加缺少的新图片
-        for (let i = 0; i < picFileNames.length; i++) {
-            const v = picFileNames[i];
-            if (picSortJson.indexOf(v) == -1) {
-                picSortJson.sort.push(v);
-            }
-        }
-        //给排序文件去除不存在的图片
-        for (let i = 0; i < picSortJson.length; i++) {
-            const v = picSortJson[i];
-            if (picFileNames.indexOf(v) == -1) {
-                picSortJson.sort.remove(v);
-            }
-        }
     } catch (error) {
-        //没图片，初始化为当前图片列表
+
     }
+    console.log("读取排序文件结果" + picSortJson.sort);
+    //给排序文件添加缺少的新图片
+    for (let i = 0; i < picFileNames.length; i++) {
+        const v = picFileNames[i];
+        if (picSortJson.sort.indexOf(v) == -1) {
+            picSortJson.sort.push(v);
+        }
+    }
+    //给排序文件去除不存在的图片
+    for (let i = 0; i < picSortJson.sort.length; i++) {
+        const v = picSortJson.sort[i];
+        if (picFileNames.indexOf(v) == -1) {
+            picSortJson.sort.remove(v);
+        }
+    }
+    // console.log("picSortJson.sort = " + picSortJson.sort)
     SaveSortJson(groupName, charaName, picSortJson);
     let picFileUrls = new Array();
     picSortJson.sort.forEach((v, i) => { picFileUrls[i] = rootDir + "图库/" + groupName + "/" + charaName + "/" + v })
