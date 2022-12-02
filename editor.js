@@ -750,10 +750,10 @@ function setDiceInput() {
     dicediv.style.top = pos.top + "px";
     let dicetip = document.createElement('div');
     dicetip.className = 'dice-tip';
-    dicetip.innerText = '1D';
+    dicetip.innerText = '骰子';
     let diceinput = document.createElement('input');
     diceinput.className = 'dice-input';
-    diceinput.placeholder = '骰子点数+修正+修正...'
+    diceinput.placeholder = '多个骰子(ndn)+修正...'
     let dicesum = document.createElement('div');
     dicesum.className = 'dice-sum';
     dicediv.appendChild(dicetip);
@@ -763,12 +763,15 @@ function setDiceInput() {
     diceinput.addEventListener("input", (e) => {
         let text = e.srcElement.value;
         // console.log("检测到输入，dice内容为" + text);
-        if (/^[1-9]\d{0,3}((\+|\-)[1-9]\d{0,3})*$/.test(text)) {
-            //通过测试，让dicesum显示总数
-            dicesum.innerText = `总和：${eval(text)}点`;
-        } else {
+
+        text = text.replaceAll("d","*");
+        try{
+            let sum = eval(text);
+            dicesum.innerText = `总和：${sum}点`;
+        }catch(e){
+            console.log(`格式错误:${e}`);
             dicesum.innerText = `格式错误`;
-        };
+        }
     })
     diceinput.addEventListener("keydown", (e) => {
         if (e.keyCode === 13) {
@@ -776,115 +779,134 @@ function setDiceInput() {
             let text = e.srcElement.value;
             //判空
             if (text == "") return;
+            //关闭输入
+            diceinput.readOnly = true;
+            /**
+             * @description 储存最终的算式表达式。
+             * @warning 改该变量名时，注意后面有eval，要一起改到
+             * @type {string}
+             */
+            let resultExpression = text;
+            //储存text中所有ndn形式的string
+            let diceValues = resultExpression.match(/[0-9]+d[0-9]+/g);
+            //检验是否有ndn, 若无, 去除输入框后退出
+            if(!diceValues){
+                dicediv.parentNode.removeChild(dicediv);
+                return;
+            }
 
-
-            if (/^[1-9]\d{0,3}((\+|\-)[1-9]\d{0,3})*$/.test(text)) {
-                //通过测试，关闭输入
-                diceinput.readOnly = true;
-                //通过测试，提取第一个数，剩下部分进行eval计算。
-                let diceValue = parseInt(text.match(/^[1-9]\d*/));;
-                console.log("dicValue为" + diceValue);
-                fixtext = text.replace(/^[1-9]\d{0,3}/, "");
-                let fixValue = 0;
-                if (fixtext != "") {
-                    fixValue = eval(fixtext);
-                }
-                console.log("fixValue为" + fixValue);
-
-                if (useApi) {
-                    //调用RANDOM.ORG，显示等待文字，删除dice元素，插入总和，记录历史
-                    dicesum.innerText = dicesum.innerText + ` 正在获取随机数`;
-                    console.log("发送req" + JSON.stringify({
+            /**
+             * @param {Number} inputDiceValue 输入的骰子值
+             * @returns {Number} 1-输入骰子值之间的随机整数值
+             */
+            let getRandomDiceValue = (inputDiceValue)=>{
+                if(!useApi)return Math.floor(Math.random()*inputDiceValue+1);
+                
+                //当使用Api时
+                //！！！未调试！！！
+                //调用RANDOM.ORG
+                let randomValue = "(-1)";
+                dicesum.innerText = `正在获取随机数`;
+                console.log("发送req" + JSON.stringify({
+                    "jsonrpc": "2.0",
+                    "method": "generateIntegers",
+                    "params": {
+                        "apiKey": config.randomapi,
+                        "n": 1,
+                        "min": 1,
+                        "max": inputDiceValue
+                    },
+                    "id": 1751
+                }));
+                fetch("https://api.random.org/json-rpc/2/invoke", {
+                    method: "POST",
+                    headers: {
+                        'user-agent': 'Chrome',
+                        'content-type': 'application/json'
+                    },
+                    body: JSON.stringify({
                         "jsonrpc": "2.0",
                         "method": "generateIntegers",
                         "params": {
                             "apiKey": config.randomapi,
                             "n": 1,
                             "min": 1,
-                            "max": diceValue
+                            "max": inputDiceValue
                         },
                         "id": 1751
-                    }));
-                    fetch("https://api.random.org/json-rpc/2/invoke", {
-                        method: "POST",
-                        headers: {
-                            'user-agent': 'Chrome',
-                            'content-type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            "jsonrpc": "2.0",
-                            "method": "generateIntegers",
-                            "params": {
-                                "apiKey": config.randomapi,
-                                "n": 1,
-                                "min": 1,
-                                "max": diceValue
-                            },
-                            "id": 1751
-                        })
-                    }).then(function (response) {
-                        return response.json();
                     })
-                        .then(function (myJson) {
-                            console.log("取得random结果 " + JSON.stringify(myJson))
-                            if (myJson.error) {
-                                // dicesum.innerText = `获取失败！`;
-                                let alertOptions = {
-                                    type: "none",
-                                    buttons: ["坏耶"],
-                                    title: "提示",
-                                    message: "获取随机数失败！请检查apikey或重试"
-                                }
-                                remote.dialog.showMessageBox(win, alertOptions)
-                                dicediv.parentNode.removeChild(dicediv);
-                                return 0;
-                            }
-                            //调用随机API，删除dice元素，插入总和，记录历史
-                            let randomValue = myJson.result.random.data[0];
-                            //结算
-                            let randomResult = randomValue + fixValue;
-                            dicediv.parentNode.removeChild(dicediv);
-                            // console.log(`node is ${node},offset is ${offset}`)
-                            // inputDiv.focus();
-                            let newR = document.createRange();
-                            // newR.selectNode(node);
-                            newR.setStart(node, offset);
-                            newR.setEnd(node, offset);
-                            let finalText = `【1d${diceValue}=${randomValue}${fixtext}=${randomResult}】`
-                            newR.insertNode(document.createTextNode(finalText));
-                            sel.removeAllRanges()
-                            sel.addRange(newR)
-                            newR.collapse(false);
-                            let record = document.createElement('div');
-                            record.className = 'history-record';
-                            record.innerText = finalText;
-                            historyDiv.appendChild(record);
-                        });
-                }
-                else {
-                    //调用随机API，删除dice元素，插入总和，记录历史
-                    let randomValue = Math.floor(Math.random() * diceValue + 1);
-                    //结算
-                    let randomResult = randomValue + fixValue;
-                    dicediv.parentNode.removeChild(dicediv);
-                    console.log(`node is ${node},offset is ${offset}`)
-                    // inputDiv.focus();
-                    let newR = document.createRange();
-                    // newR.selectNode(node);
-                    newR.setStart(node, offset);
-                    newR.setEnd(node, offset);
-                    let finalText = `【1d${diceValue}=${randomValue}${fixtext}=${randomResult}】`
-                    newR.insertNode(document.createTextNode(finalText));
-                    sel.removeAllRanges()
-                    sel.addRange(newR)
-                    newR.collapse(false);
-                    let record = document.createElement('div');
-                    record.className = 'history-record';
-                    record.innerText = finalText;
-                    historyDiv.appendChild(record);
-                }
-
+                }).then(function (response) {
+                    return response.json();
+                }).then(function (myJson) {
+                    console.log("取得random结果 " + JSON.stringify(myJson))
+                    if (myJson.error) {
+                        // dicesum.innerText = `获取失败！`;
+                        let alertOptions = {
+                            type: "none",
+                            buttons: ["坏耶"],
+                            title: "提示",
+                            message: "获取随机数失败！请检查apikey或重试"
+                        }
+                        remote.dialog.showMessageBox(win, alertOptions);
+                        return 0;
+                    }
+                    randomValue = myJson.result.random.data[0];
+                });
+                return randomValue;
             }
+            
+            for(var i=0;i<diceValues.length;i++){
+                let [diceNum,diceValue] = diceValues[i].split("d");
+                console.log(`[diceNum,diceValue]: [${diceNum},${diceValue}]`);
+                if(diceNum>=1000 ||diceNum==0 || diceValue==0){
+                    console.log("输出超出设定的范围");
+                    dicediv.parentNode.removeChild(dicediv);
+                    return;
+                }
+                let randomValue = `${getRandomDiceValue(diceValue)}`;
+                for(let i=2;i<=diceNum;i++){
+                    randomValue += `+${getRandomDiceValue(diceValue)}`
+                }
+                // 多个骰子的随机值时，用括号包起来。
+                if(diceNum>=2){
+                    randomValue = `(${randomValue})`;
+                }
+                console.log(`randomValue: ${randomValue}`);
+                resultExpression = resultExpression.replace(diceValues[i],randomValue);
+            }
+
+            //结算，插入总和，记录历史
+            dicediv.parentNode.removeChild(dicediv);
+            console.log(`node is ${node},offset is ${offset}`)
+            // inputDiv.focus();
+            let newR = document.createRange();
+            // newR.selectNode(node);
+            newR.setStart(node, offset);
+            newR.setEnd(node, offset);
+            console.log(`resultExpression: ${resultExpression}`);
+            console.log(`eval(eval("resultExpression")): ${eval(eval("resultExpression"))}`);
+            let finalText;
+            if(text.match(/^[0-9]*d[0-9]*$/)){
+                if(text.split("d")[0]==1){
+                    //若输入仅为 "1dn" 的形式，直接输出结果。 1d100=5
+                    finalText = `【${text}=${resultExpression}】`;
+                }
+                //若输入仅为 "ndn" 的形式，因为前面处理时会加个括号，这里把括号去掉，输出多个骰子和相加。2d100=20+10=30
+                else finalText = `【${text}=${resultExpression.replace(/\(|\)/g,"")}=${eval(eval("resultExpression"))}】`;
+
+            }else{
+                // 输入为多个ndn复合的形式时 "原文本=展开骰子点数的表达式=结果"。1d100+2d10=99+(6+9)=114
+                // 因为resultExpression带括号，所以要eval两次。
+                finalText = `【${text}=${resultExpression}=${eval(eval("resultExpression"))}】`;
+            }
+            newR.insertNode(document.createTextNode(finalText));
+            sel.removeAllRanges();
+            sel.addRange(newR);
+            newR.collapse(false);
+            let record = document.createElement('div');
+            record.className = 'history-record';
+            record.innerText = finalText;
+            historyDiv.appendChild(record);
         }
         else if (e.keyCode === 27 && !diceinput.readOnly) {
             e.preventDefault();
@@ -901,6 +923,7 @@ function setDiceInput() {
             // newR.setEnd(node,offset);
         }
     })
+
 }
 /**
 * Get the caret position in all cases
