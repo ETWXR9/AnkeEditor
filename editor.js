@@ -162,7 +162,7 @@ window.onload = () => {
         // console.log(doc.body);
         if (doc) {
             var images = doc.getElementsByTagName('img');
-            let regexp = /http((?!(http|png|jpg|jpeg)).)*(png|jpg|jpeg)/gi;
+            let regexp = /(http|file)((?!(http|file|png|jpg|jpeg)).)*(png|jpg|jpeg)/gi;
             // console.log(images);
             if (images) {
                 [...images].forEach(img => {
@@ -186,10 +186,6 @@ window.onload = () => {
         // console.log("Selection started in targetDiv");
         document.addEventListener("selectionchange", HandleSelectionChange, false);
     });
-    // inputDiv.addEventListener("focusout", () => {
-    //     console.log("focusout targetDiv");
-    //     document.removeEventListener("selectionchange", HandleSelectionChange);
-    // })
     inputDiv.addEventListener("input", () => {
         // console.log("input in targetDiv");
         document.addEventListener("selectionchange", HandleSelectionChange);
@@ -208,14 +204,6 @@ ipcRenderer.on("onquit", (event) => {
     console.log("保存退出 filepath = " + filePath);
 
     try {
-        //更新到本地文件
-        // for (var groupName in unsavedChara) {
-        //     var charaNameArray = unsavedChara[groupName]
-        //     charaNameArray.forEach(charaName => {
-        //         // alert(charaName);
-        //         updateCharaJSON(groupName, charaName);
-        //     })
-        // }
         if (contentUnsaved) {
             let index = remote.dialog.showMessageBoxSync({
                 title: '提示',
@@ -355,12 +343,15 @@ function loadChara(groupName, charaName) {
     let picFileNames = getPictureFiles(groupName, charaName);
     //读取排序文件
     let picSortJson = {};
-    picSortJson.sort = picFileNames;
     try {
         picSortJson = fs.readFileSync(rootDir + "图库/" + groupName + "/" + charaName + "/" + "sort.json", "utf-8");
         picSortJson = JSON.parse(picSortJson);
     } catch (error) {
-
+        console.log(error);
+        alert("检测到人物目录缺乏排序文件sort.json，已自动生成！");
+    }
+    if (!picSortJson.sort) {
+        picSortJson.sort = picFileNames;
     }
     console.log("读取排序文件结果" + picSortJson.sort);
     //给排序文件添加缺少的新图片
@@ -910,7 +901,6 @@ function setDiceInput() {
             // newR.setEnd(node,offset);
         }
     })
-
 }
 /**
 * Get the caret position in all cases
@@ -1064,14 +1054,17 @@ ipcRenderer.on("toPng", e => {
             alert('生成截图出错')
             console.error('oops, something went wrong!', error);
         });
-    // html2canvas(clone, {
-    //     allowTaint: true,
-    //     useCORS: true
-    // }).then(function (canvas) {
-    //     document.body.removeChild(clone);
-    //     var img = canvas.toDataURL();
-    //     window.open(img);
-    // });
+})
+ipcRenderer.on("countWord", e => {
+    let imgCount = inputDiv.getElementsByTagName("img").length;
+    let charaCount = inputDiv.innerText.replace(/\r|\n|\s/g, "").length;
+    let index = remote.dialog.showMessageBoxSync({
+        title: '提示',
+        type: 'info',
+        defaultId: 0,
+        message: `当前字数${charaCount};当前图片数${imgCount}`,
+        buttons: ['确定']
+    });
 })
 
 //封装换行逻辑，用于回车确认时临时注销
